@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --primary-green: #065f46;
+    --primary-green-hover: #047857;
+    --accent-yellow: #f59e0b;
+    --accent-yellow-hover: #d97706;
+  }
+}
+
+/* 58mm Continuous Thermal Receipt Print Styles */
+@media print {
+  @page {
+    size: 58mm auto;
+    margin: 0;
+  }
+  
+  body * {
+    visibility: hidden;
+  }
+  
+  #printable-ticket, #printable-ticket * {
+    visibility: visible;
+  }
+  
+  #printable-ticket {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 54mm;
+    margin: 0 auto;
+    padding: 2mm;
+    font-family: monospace;
+    color: #000;
+    background: #fff;
+  }
+}
+
+/* Call flash animation for public display */
+@keyframes callPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 25px 8px rgba(245, 158, 11, 0.9);
+  }
+}
+
+.animate-call-pulse {
+  animation: callPulse 1.2s ease-in-out infinite;
+}
