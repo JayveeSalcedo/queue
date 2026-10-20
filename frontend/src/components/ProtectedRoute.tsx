@@ -1,5 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { ShieldAlert } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 
@@ -18,12 +19,8 @@ export const ProtectedRoute: React.FC<Props> = ({ allow, children }) => {
   if (isLoading) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4">
-        <div className="w-12 h-12 rounded-2xl bg-emerald-800 text-amber-300 font-black text-2xl flex items-center justify-center shadow-md animate-pulse">
-          Q
-        </div>
-        <p className="mt-3 text-xs font-bold text-slate-500 uppercase tracking-wider">
-          Checking station sign-in...
-        </p>
+        <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-emerald-700 animate-spin" />
+        <p className="mt-3 text-sm text-slate-500">Checking sign-in…</p>
       </div>
     );
   }
@@ -35,15 +32,18 @@ export const ProtectedRoute: React.FC<Props> = ({ allow, children }) => {
 
   if (user.role !== 'ADMIN' && !allow.includes(user.role)) {
     return (
-      <div className="max-w-md mx-auto px-4 py-16 text-center">
-        <div className="bg-white rounded-3xl p-8 shadow-sm border-2 border-amber-300">
-          <h1 className="text-xl font-black text-emerald-950">Wrong station account</h1>
-          <p className="text-sm text-slate-600 font-medium mt-2">
-            You are signed in as <span className="font-black">{user.full_name}</span> ({user.role}),
-            which cannot open this screen.
+      <div className="max-w-md mx-auto px-4 py-16">
+        <div className="card p-6 text-center">
+          <div className="w-11 h-11 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+            <ShieldAlert className="w-5 h-5" />
+          </div>
+          <h1 className="mt-4 text-lg font-semibold text-slate-900">This account can't open this station</h1>
+          <p className="text-sm text-slate-600 mt-2">
+            You are signed in as <span className="font-medium text-slate-900">{user.full_name}</span> (
+            {user.role.toLowerCase()}).
           </p>
-          <p className="text-xs text-slate-500 mt-3">
-            Sign out from the top bar and sign in with a {allow.join(' or ')} account.
+          <p className="text-sm text-slate-500 mt-1">
+            Sign out from the top bar and sign in with a {allow.map((r) => r.toLowerCase()).join(' or ')} account.
           </p>
         </div>
       </div>

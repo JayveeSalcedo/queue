@@ -1,4 +1,17 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+@theme {
+  /* Bundled with the build so it renders the same with no internet */
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --animate-fade-in: fadeIn 150ms ease-out;
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
 
 @layer base {
   :root {
@@ -6,6 +19,104 @@
     --primary-green-hover: #047857;
     --accent-yellow: #f59e0b;
     --accent-yellow-hover: #d97706;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+}
+
+/* Shared building blocks so every station looks like one product */
+@layer components {
+  .page {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8;
+  }
+
+  .page-title {
+    @apply text-2xl font-semibold tracking-tight text-slate-900;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-slate-500 mt-1;
+  }
+
+  .card {
+    @apply bg-white rounded-xl border border-slate-200 shadow-[0_1px_2px_rgba(15,23,42,0.04)];
+  }
+
+  .card-header {
+    @apply flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-200;
+  }
+
+  .card-title {
+    @apply text-sm font-semibold text-slate-900;
+  }
+
+  .eyebrow {
+    @apply text-xs font-medium uppercase tracking-wider text-slate-500;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors cursor-pointer
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2
+      disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  .btn-lg {
+    @apply px-5 py-3 text-base;
+  }
+
+  .btn-primary {
+    @apply bg-emerald-800 text-white hover:bg-emerald-900 shadow-sm;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:text-slate-900 shadow-sm;
+  }
+
+  .btn-ghost {
+    @apply text-slate-600 hover:bg-slate-100 hover:text-slate-900;
+  }
+
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700 shadow-sm;
+  }
+
+  .btn-danger-outline {
+    @apply bg-white text-red-700 border border-red-200 hover:bg-red-50 shadow-sm;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-slate-700 mb-1.5;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm
+      placeholder:text-slate-400
+      focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+
+  /* Proportional figures keep the dash tight ("R-004", not "R - 004") */
+  .ticket-no {
+    @apply font-bold tracking-tight;
+    font-variant-numeric: proportional-nums lining-nums;
+  }
+
+  .modal-backdrop {
+    @apply fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-[2px] p-4 animate-fade-in;
+  }
+
+  .modal {
+    @apply bg-white rounded-xl shadow-xl w-full overflow-hidden;
   }
 }
 
@@ -15,15 +126,15 @@
     size: 58mm auto;
     margin: 0;
   }
-  
+
   body * {
     visibility: hidden;
   }
-  
+
   #printable-ticket, #printable-ticket * {
     visibility: visible;
   }
-  
+
   #printable-ticket {
     position: absolute;
     left: 0;
@@ -37,18 +148,16 @@
   }
 }
 
-/* Call flash animation for public display */
+/* Call highlight for the public display: a calm glow rather than a bounce */
 @keyframes callPulse {
   0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.0);
   }
   50% {
-    transform: scale(1.04);
-    box-shadow: 0 0 25px 8px rgba(245, 158, 11, 0.9);
+    box-shadow: 0 0 0 6px rgba(251, 191, 36, 0.45);
   }
 }
 
 .animate-call-pulse {
-  animation: callPulse 1.2s ease-in-out infinite;
+  animation: callPulse 1.6s ease-in-out infinite;
 }

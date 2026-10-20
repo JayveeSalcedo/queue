@@ -2,16 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueue } from '../context/QueueContext';
 import { api } from '../services/api';
-import { 
-  ShieldCheck, 
-  Users, 
-  Monitor, 
-  Settings, 
-  Wifi, 
-  QrCode, 
-  ArrowRight,
-  Tv
-} from 'lucide-react';
+import { QUEUE_META } from '../queueStyles';
+import { ShieldCheck, Settings, Network, ArrowRight, Tv, Headset } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
   const { settings, waitingCounts } = useQueue();
@@ -22,137 +14,149 @@ export const HomePage: React.FC = () => {
   }, []);
 
   const officeName = settings.office_name || 'PANELCO III SOUTHEAST AREA OFFICE';
-  const serverIp = networkInfo?.primary_ip || window.location.hostname;
+  // The server PC may have one address per connection (LAN cable and Wi-Fi)
+  const serverIps = networkInfo?.ip_addresses?.length
+    ? networkInfo.ip_addresses
+    : [networkInfo?.primary_ip || window.location.hostname];
   const serverPort = networkInfo?.port || 8000;
-  const baseUrl = `http://${serverIp}:${serverPort}`;
 
   const stations = [
     {
       title: 'Guard Station',
-      desc: '1-tap ticket generation & thermal printing for mobile phone',
+      desc: 'Issue tickets and print 58mm receipts.',
       to: '/guard',
-      color: 'bg-emerald-800 text-white border-emerald-900',
-      badge: `${waitingCounts.TOTAL} Total Waiting`,
       icon: ShieldCheck,
-      url: `${baseUrl}/guard`,
+      iconClass: 'bg-slate-100 text-slate-700',
+      meta: `${waitingCounts.TOTAL} waiting`,
     },
     {
-      title: 'Counter 1 (Regular)',
-      desc: 'Calling station for standard citizen service inquiries',
+      title: 'Counter 1',
+      desc: 'Regular queue — general inquiries and transactions.',
       to: '/counter/1',
-      color: 'bg-emerald-700 text-white border-emerald-800',
-      badge: `${waitingCounts.REGULAR} in line`,
-      icon: Users,
-      url: `${baseUrl}/counter/1`,
+      icon: Headset,
+      iconClass: QUEUE_META.REGULAR.chip,
+      meta: `${waitingCounts.REGULAR} waiting`,
     },
     {
-      title: 'Counter 2 (Priority)',
-      desc: 'Dedicated calling station for Seniors, PWD, and Pregnant',
+      title: 'Counter 2',
+      desc: 'Priority queue — senior citizens, PWD and pregnant women.',
       to: '/counter/2',
-      color: 'bg-amber-500 text-emerald-950 border-amber-600',
-      badge: `${waitingCounts.PRIORITY} in line`,
-      icon: Users,
-      url: `${baseUrl}/counter/2`,
+      icon: Headset,
+      iconClass: QUEUE_META.PRIORITY.chip,
+      meta: `${waitingCounts.PRIORITY} waiting`,
     },
     {
-      title: 'Counter 3 (Request / Complaint)',
-      desc: 'Dedicated station for formal requests and citizen complaints',
+      title: 'Counter 3',
+      desc: 'Request / complaint queue — formal requests and complaints.',
       to: '/counter/3',
-      color: 'bg-teal-700 text-white border-teal-800',
-      badge: `${waitingCounts.COMPLAINT} in line`,
-      icon: Users,
-      url: `${baseUrl}/counter/3`,
+      icon: Headset,
+      iconClass: QUEUE_META.COMPLAINT.chip,
+      meta: `${waitingCounts.COMPLAINT} waiting`,
     },
     {
-      title: 'Public Display Screen',
-      desc: 'Large TV waiting area screen with voice audio & chime',
+      title: 'Public Display',
+      desc: 'Waiting-area TV with chime and voice announcements.',
       to: '/display',
-      color: 'bg-slate-900 text-white border-slate-800',
-      badge: 'Open Access (No Login)',
       icon: Tv,
-      url: `${baseUrl}/display`,
+      iconClass: 'bg-slate-100 text-slate-700',
+      meta: 'No sign-in',
     },
     {
-      title: 'Admin Management',
-      desc: 'Metrics dashboard, CSV exports, DB backups & settings',
+      title: 'Administration',
+      desc: 'Reports, ticket logs, backups and settings.',
       to: '/admin',
-      color: 'bg-slate-800 text-white border-slate-900',
-      badge: 'Management Only',
       icon: Settings,
-      url: `${baseUrl}/admin`,
+      iconClass: 'bg-slate-100 text-slate-700',
+      meta: 'Admin only',
     },
   ];
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
-      {/* Hero Welcome */}
-      <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-800 rounded-3xl p-8 text-white shadow-xl border-4 border-amber-400">
-        <div className="max-w-3xl">
-          <div className="inline-block px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 font-bold text-xs uppercase tracking-wider mb-3 border border-amber-400/30">
-            Offline LAN-Only Queue Network
+    <div className="page space-y-8">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <img
+            src="/logo.png"
+            alt="PANELCO III logo"
+            className="w-14 h-14 rounded-full object-contain bg-white ring-1 ring-slate-200 shrink-0"
+          />
+          <div>
+            <h1 className="page-title">{officeName}</h1>
+            <p className="page-subtitle">Queue Management System — select a station to open.</p>
           </div>
-          <div className="flex items-center gap-4">
-            <img
-              src="/logo.png"
-              alt="PANELCO III logo"
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white object-contain p-1 shadow-lg shrink-0"
-            />
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight">{officeName}</h1>
-          </div>
-          <p className="mt-2 text-sm sm:text-base text-emerald-200 font-medium">
-            Internet is optional. Local network is required. All workstations and smart TVs connect directly to this office PC.
-          </p>
+        </div>
 
-          {/* Network IP Guide */}
-          <div className="mt-6 p-4 rounded-2xl bg-emerald-900/80 border border-emerald-700 inline-block">
-            <div className="flex items-center space-x-2 text-xs font-bold text-amber-300 uppercase tracking-wider">
-              <Wifi className="w-4 h-4" />
-              <span>Office PC Local Address:</span>
+        {/* Network address for connecting other devices */}
+        <div className="card px-4 py-3 flex items-center gap-3 lg:max-w-sm">
+          <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+            <Network className="w-4 h-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs text-slate-500">
+              {serverIps.length > 1
+                ? 'Open from other PCs or phones (use the address of their network)'
+                : 'Open from other PCs or phones on the office network'}
             </div>
-            <div className="mt-1 font-mono font-black text-lg text-white select-all">
-              {baseUrl}
-            </div>
-            <p className="text-[11px] text-emerald-300 mt-0.5">
-              Open this URL on phones, tablets, and smart TVs connected to the office Wi-Fi / router.
-            </p>
+            {serverIps.map((ip) => (
+              <div key={ip} className="text-sm font-semibold text-slate-900 font-mono select-all truncate">
+                http://{ip}:{serverPort}
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
+      {/* Live summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="card p-4">
+          <div className="text-xs text-slate-500">Waiting now</div>
+          <div className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">{waitingCounts.TOTAL}</div>
+        </div>
+        {(['REGULAR', 'PRIORITY', 'COMPLAINT'] as const).map((q) => (
+          <div key={q} className="card p-4">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <span className={`w-2 h-2 rounded-full ${QUEUE_META[q].dot}`} />
+              {QUEUE_META[q].label}
+            </div>
+            <div className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">{waitingCounts[q]}</div>
+          </div>
+        ))}
+      </div>
+
       {/* Station Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {stations.map((s) => {
-          const Icon = s.icon;
-          return (
-            <Link
-              key={s.to}
-              to={s.to}
-              className={`rounded-3xl p-6 shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 border-2 flex flex-col justify-between ${s.color}`}
-            >
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20">
-                    <Icon className="w-6 h-6 text-amber-300" />
+      <div>
+        <h2 className="text-sm font-semibold text-slate-900 mb-3">Stations</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {stations.map((s) => {
+            const Icon = s.icon;
+            return (
+              <Link
+                key={s.to}
+                to={s.to}
+                className="card group p-5 flex flex-col hover:border-emerald-300 hover:shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+              >
+                <div className="flex items-start justify-between">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${s.iconClass}`}>
+                    <Icon className="w-5 h-5" />
                   </div>
-                  <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-black/20 border border-white/10">
-                    {s.badge}
-                  </span>
+                  <span className="text-xs text-slate-500">{s.meta}</span>
                 </div>
 
-                <h3 className="text-xl font-black tracking-tight mb-1">{s.title}</h3>
-                <p className="text-xs opacity-80 leading-relaxed mb-4">{s.desc}</p>
-              </div>
+                <h3 className="mt-4 text-base font-semibold text-slate-900">{s.title}</h3>
+                <p className="mt-1 text-sm text-slate-500 leading-relaxed flex-1">{s.desc}</p>
 
-              <div className="pt-4 border-t border-white/10 flex items-center justify-between text-xs font-bold">
-                <span className="font-mono opacity-70 truncate max-w-[180px]">{s.url}</span>
-                <span className="flex items-center space-x-1 text-amber-300">
-                  <span>Open</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </span>
-              </div>
-            </Link>
-          );
-        })}
+                <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-sm">
+                  <span className="font-mono text-xs text-slate-400 truncate">{s.to}</span>
+                  <span className="flex items-center gap-1 font-medium text-emerald-800 group-hover:gap-1.5 transition-all">
+                    Open
+                    <ArrowRight className="w-4 h-4" />
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

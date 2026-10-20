@@ -38,7 +38,7 @@ async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] =
         
     username = payload["sub"]
     async for db in get_db():
-        cursor = await db.execute("SELECT id, username, full_name, role FROM users WHERE username = ?", (username,))
+        cursor = await db.execute("SELECT id, username, full_name, role, counter_id FROM users WHERE username = ?", (username,))
         row = await cursor.fetchone()
         if not row:
             raise HTTPException(status_code=401, detail="User not found")
@@ -46,7 +46,8 @@ async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] =
             "id": row["id"],
             "username": row["username"],
             "full_name": row["full_name"],
-            "role": row["role"]
+            "role": row["role"],
+            "counter_id": row["counter_id"]
         }
     raise HTTPException(status_code=500, detail="Database error")
 

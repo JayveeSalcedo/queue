@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { QueueType } from '../types';
-import { ArrowRightLeft, X } from 'lucide-react';
+import { QUEUE_META } from '../queueStyles';
+import { X } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
@@ -28,73 +29,78 @@ export const TransferModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border-2 border-emerald-700">
-        <div className="bg-emerald-800 text-white px-5 py-4 flex items-center justify-between border-b-2 border-amber-400">
-          <div className="flex items-center space-x-2">
-            <ArrowRightLeft className="w-5 h-5 text-amber-300" />
-            <span className="font-extrabold text-base">Transfer Ticket {ticketNumber}</span>
+    <div className="modal-backdrop">
+      <div className="modal max-w-md" role="dialog" aria-modal="true" aria-labelledby="transfer-title">
+        <div className="card-header">
+          <div>
+            <h2 id="transfer-title" className="text-base font-semibold text-slate-900">
+              Transfer {ticketNumber}
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">The customer goes back in line for the queue you choose.</p>
           </div>
-          <button
-            onClick={onClose}
-            disabled={isTransferring}
-            className="text-emerald-200 hover:text-white p-1 rounded-lg"
-          >
+          <button onClick={onClose} disabled={isTransferring} className="btn btn-ghost p-1.5" title="Close">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Transfer To Queue / Service
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {(['REGULAR', 'PRIORITY', 'COMPLAINT'] as QueueType[]).map((q) => (
-                <button
-                  key={q}
-                  type="button"
-                  onClick={() => setTargetQueue(q)}
-                  className={`py-2 px-1 text-xs font-bold rounded-lg border-2 text-center transition-all ${
-                    targetQueue === q
-                      ? 'border-emerald-600 bg-emerald-50 text-emerald-800 shadow-sm'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                  }`}
-                >
-                  {q === 'COMPLAINT' ? 'Request/Comp' : q}
-                </button>
-              ))}
+        <form onSubmit={handleSubmit}>
+          <div className="p-6 space-y-5">
+            <fieldset>
+              <legend className="label">Transfer to</legend>
+              <div className="space-y-2">
+                {(['REGULAR', 'PRIORITY', 'COMPLAINT'] as QueueType[]).map((q) => {
+                  const selected = targetQueue === q;
+                  return (
+                    <label
+                      key={q}
+                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                        selected
+                          ? 'border-emerald-600 bg-emerald-50/60 ring-1 ring-emerald-600'
+                          : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="target-queue"
+                        value={q}
+                        checked={selected}
+                        onChange={() => setTargetQueue(q)}
+                        className="accent-emerald-700"
+                      />
+                      <span className={`w-2 h-2 rounded-full ${QUEUE_META[q].dot}`} />
+                      <span className="flex-1">
+                        <span className="block text-sm font-medium text-slate-900">{QUEUE_META[q].label}</span>
+                        <span className="block text-xs text-slate-500">
+                          {QUEUE_META[q].counter} · {QUEUE_META[q].description}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            <div>
+              <label htmlFor="transfer-notes" className="label">
+                Note <span className="font-normal text-slate-400">(optional)</span>
+              </label>
+              <input
+                id="transfer-notes"
+                type="text"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="e.g. Needs supervisor assistance"
+                className="input"
+              />
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-              Reason / Transfer Note (Optional)
-            </label>
-            <input
-              type="text"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Needs supervisor assistance"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
-            />
-          </div>
-
-          <div className="pt-2 flex items-center justify-end space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isTransferring}
-              className="px-4 py-2 rounded-xl border border-slate-300 font-bold text-sm text-slate-700 hover:bg-slate-100 transition-colors"
-            >
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
+            <button type="button" onClick={onClose} disabled={isTransferring} className="btn btn-secondary">
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={isTransferring}
-              className="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm shadow-md transition-all"
-            >
-              {isTransferring ? 'Transferring...' : 'Confirm Transfer'}
+            <button type="submit" disabled={isTransferring} className="btn btn-primary">
+              {isTransferring ? 'Transferring…' : 'Transfer'}
             </button>
           </div>
         </form>

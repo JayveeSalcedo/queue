@@ -1,6 +1,6 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { QueueProvider } from './context/QueueContext';
 import { Navbar } from './components/Navbar';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -11,12 +11,26 @@ import { DisplayPage } from './pages/DisplayPage';
 import { AdminPage } from './pages/AdminPage';
 import { LoginPage } from './pages/LoginPage';
 
+/**
+ * Keeps a counter account on its own counter: /counter or another counter's
+ * link (e.g. a bookmark left from a different operator) goes to /counter/<own>.
+ * Admins can open any counter.
+ */
+const OwnCounterOnly: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  const { id } = useParams<{ id: string }>();
+  if (user?.role === 'COUNTER' && user.counter_id && id !== String(user.counter_id)) {
+    return <Navigate to={`/counter/${user.counter_id}`} replace />;
+  }
+  return <>{children}</>;
+};
+
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
       <AuthProvider>
         <QueueProvider>
-          <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-amber-300 selection:text-emerald-950">
+          <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-emerald-100 selection:text-emerald-950">
             <Navbar />
             <main className="flex-1">
               <Routes>
@@ -33,7 +47,9 @@ export const App: React.FC = () => {
                   path="/counter"
                   element={
                     <ProtectedRoute allow={['COUNTER']}>
-                      <CounterPage />
+                      <OwnCounterOnly>
+                        <CounterPage />
+                      </OwnCounterOnly>
                     </ProtectedRoute>
                   }
                 />
@@ -41,7 +57,9 @@ export const App: React.FC = () => {
                   path="/counter/:id"
                   element={
                     <ProtectedRoute allow={['COUNTER']}>
-                      <CounterPage />
+                      <OwnCounterOnly>
+                        <CounterPage />
+                      </OwnCounterOnly>
                     </ProtectedRoute>
                   }
                 />

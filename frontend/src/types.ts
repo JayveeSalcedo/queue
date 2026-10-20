@@ -89,6 +89,8 @@ export interface User {
   username: string;
   full_name: string;
   role: 'ADMIN' | 'GUARD' | 'COUNTER';
+  /** Counter a COUNTER account operates */
+  counter_id?: number | null;
 }
 
 export interface AdminMetrics {

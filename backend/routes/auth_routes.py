@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from typing import Optional
 from database import get_db, verify_password, hash_password
 from auth import create_access_token, get_current_user, require_role
 from models import LoginRequest, TokenResponse, UserResponse
@@ -12,6 +13,7 @@ class CreateUserRequest(BaseModel):
     password: str
     full_name: str
     role: str # 'ADMIN', 'GUARD', 'COUNTER'
+    counter_id: Optional[int] = None  # which counter a COUNTER account operates
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
@@ -19,7 +21,7 @@ class ChangePasswordRequest(BaseModel):
 
 @router.post("/login", response_model=TokenResponse)
 async def login(req: LoginRequest, db: aiosqlite.Connection = Depends(get_db)):
-    cursor = await db.execute("SELECT id, username, password_hash, full_name, role FROM users WHERE username = ?", (req.username,))
+    cursor = await db.execute("SELECT id, username, password_hash, full_name, role, counter_id FROM users WHERE username = ?", (req.username,))
     user = await cursor.fetchone()
     if not user or not verify_password(user["password_hash"], req.password):
         raise HTTPException(
@@ -35,7 +37,8 @@ async def login(req: LoginRequest, db: aiosqlite.Connection = Depends(get_db)):
             "id": user["id"],
             "username": user["username"],
             "full_name": user["full_name"],
-            "role": user["role"]
+            "role": user["role"],
+            "counter_id": user["counter_id"]
         }
     }
 
@@ -64,11 +67,11 @@ async def create_user(
     pwd_hash = hash_password(req.password)
     try:
         cursor = await db.execute(
-            "INSERT INTO users (username, password_hash, full_name, role) VALUES (?, ?, ?, ?)",
-            (req.username, pwd_hash, req.full_name, req.role)
+            "INSERT INTO users (username, password_hash, full_name, role, counter_id) VALUES (?, ?, ?, ?, ?)",
+            (req.username, pwd_hash, req.full_name, req.role, req.counter_id if req.role == "COUNTER" else None)
         )
         await db.commit()
-        return {"id": cursor.lastrowid, "username": req.username, "full_name": req.full_name, "role": req.role}
+        return {"id": cursor.lastrowid, "username": req.username, "full_name": req.full_name, "role": req.role, "counter_id": req.counter_id}
     except aiosqlite.IntegrityError:
         raise HTTPException(status_code=400, detail="Username already exists")
 

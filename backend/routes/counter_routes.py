@@ -4,7 +4,7 @@ from typing import Optional
 from pydantic import BaseModel
 import aiosqlite
 
-from database import get_db
+from database import get_db, begin_write, close_stale_tickets
 from models import TransferRequest
 from websocket_manager import ws_manager
 from auth import get_current_user
@@ -97,6 +97,11 @@ async def call_next_ticket(
     db: aiosqlite.Connection = Depends(get_db),
     user: dict = Depends(get_current_user)
 ):
+    await begin_write(db)
+
+    # Free this counter from a ticket left over from a previous day
+    await close_stale_tickets(db)
+
     # 1. Fetch counter
     cursor = await db.execute("SELECT id, name, queue_type, status, current_ticket_id FROM counters WHERE id = ?", (counter_id,))
     counter = await cursor.fetchone()
@@ -170,6 +175,7 @@ async def call_specific_ticket(
     db: aiosqlite.Connection = Depends(get_db),
     user: dict = Depends(get_current_user)
 ):
+    await begin_write(db)
     cursor = await db.execute("SELECT id, name, queue_type, status, current_ticket_id FROM counters WHERE id = ?", (counter_id,))
     counter = await cursor.fetchone()
     if not counter:
@@ -312,25 +318,39 @@ async def recall_skipped_ticket(
     db: aiosqlite.Connection = Depends(get_db),
     user: dict = Depends(get_current_user)
 ):
-    cursor = await db.execute("SELECT id, name, current_ticket_id FROM counters WHERE id = ?", (counter_id,))
+    await begin_write(db)
+    cursor = await db.execute("SELECT id, name, queue_type, status, current_ticket_id FROM counters WHERE id = ?", (counter_id,))
     counter = await cursor.fetchone()
     if not counter:
         raise HTTPException(status_code=404, detail="Counter not found")
 
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    # If counter is serving another ticket, complete it
-    if counter["current_ticket_id"]:
-        await db.execute(
-            "UPDATE tickets SET status = 'COMPLETED', completed_at = ? WHERE id = ?",
-            (now_str, counter["current_ticket_id"])
+    if counter["status"] == "PAUSED":
+        raise HTTPException(
+            status_code=409,
+            detail=f"{counter['name']} is paused. Resume the counter before calling a customer."
         )
+
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # Re-activate skipped ticket
     cursor = await db.execute("SELECT id, queue_number, queue_type FROM tickets WHERE id = ? AND status = 'SKIPPED'", (req.ticket_id,))
     ticket = await cursor.fetchone()
     if not ticket:
         raise HTTPException(status_code=404, detail="Skipped ticket not found or no longer skipped")
+
+    servable = await get_servable_queue_types(db, counter)
+    if ticket["queue_type"] not in servable:
+        raise HTTPException(
+            status_code=409,
+            detail=f"{counter['name']} cannot serve {ticket['queue_type']} tickets"
+        )
+
+    # If counter is serving another ticket, complete it
+    if counter["current_ticket_id"]:
+        await db.execute(
+            "UPDATE tickets SET status = 'COMPLETED', completed_at = ? WHERE id = ? AND status IN ('CALLED', 'SERVING')",
+            (now_str, counter["current_ticket_id"])
+        )
 
     await db.execute(
         "UPDATE tickets SET status = 'CALLED', counter_id = ?, called_at = ?, called_by_user = ? WHERE id = ?",
@@ -359,10 +379,13 @@ async def mark_no_show(
     user: dict = Depends(get_current_user)
 ):
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    await db.execute(
-        "UPDATE tickets SET status = 'CANCELLED', completed_at = ?, notes = COALESCE(notes || ' ', '') || '[No Show]' WHERE id = ?",
+    # Only tickets in the skipped / holding list can be written off as no-shows
+    cursor = await db.execute(
+        "UPDATE tickets SET status = 'CANCELLED', completed_at = ?, notes = COALESCE(notes || ' ', '') || '[No Show]' WHERE id = ? AND status = 'SKIPPED'",
         (now_str, req.ticket_id)
     )
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=409, detail="Only skipped tickets can be marked as No Show")
     await db.commit()
     await ws_manager.broadcast_state("NO_SHOW", None)
     return {"message": "Ticket marked as No Show"}
@@ -380,15 +403,18 @@ async def transfer_ticket(
 
     note_suffix = f"[Transferred from Counter {counter_id}: {req.notes or ''}]".strip()
 
-    # Move ticket back to WAITING under target queue type
-    await db.execute(
+    # Move ticket back to WAITING under target queue type. Only a customer currently
+    # at a counter can be transferred - finished or cancelled tickets stay closed.
+    cursor = await db.execute(
         """
-        UPDATE tickets 
+        UPDATE tickets
         SET status = 'WAITING', queue_type = ?, counter_id = NULL, notes = COALESCE(notes || ' ', '') || ?
-        WHERE id = ?
+        WHERE id = ? AND status IN ('CALLED', 'SERVING')
         """,
         (target_q, f" {note_suffix}", req.ticket_id)
     )
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=409, detail="Only a ticket currently being served can be transferred")
 
     # Clear origin counter if it was the active ticket
     await db.execute("UPDATE counters SET current_ticket_id = NULL WHERE id = ? AND current_ticket_id = ?", (counter_id, req.ticket_id))

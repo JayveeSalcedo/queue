@@ -16,6 +16,11 @@ Designed with a **Green & Yellow** colorway:
 
 ## 🚀 Quick Start (Office PC Server)
 
+**First-time setup** (needs internet once):
+
+1. Double-click **`install_requirements.bat`**. It checks for Python 3.9.2+ (3.13 recommended) and Node.js 20.19+/22.12+, offers to install them with `winget` if missing, installs the server's Python packages into `backend\venv`, and builds the web pages into `frontend\dist`.
+2. Right-click **`allow_firewall.bat`** → **Run as administrator** so other PCs and phones can connect.
+
 To start the queue server on Windows:
 
 1. Double-click **`start_server.bat`** in this directory.
@@ -29,7 +34,7 @@ To start the queue server on Windows:
 
 ## 📱 Station URLs & Station Accounts
 
-All devices connected to the same router or Wi-Fi can access the system:
+All devices on the same office network can access the system, whether they connect with a LAN cable or over Wi-Fi. If the server PC has both a cable and Wi-Fi, it has a separate address on each; `start_server` lists them all, and each device should use the address of the network it is on:
 
 | Station | URL | Access / Default Account | Description |
 | :--- | :--- | :--- | :--- |

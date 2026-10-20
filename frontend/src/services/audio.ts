@@ -1,6 +1,8 @@
 class AudioService {
   private audioCtx: AudioContext | null = null;
   private soundEnabled: boolean = true;
+  // Announcements play one after another instead of cutting each other off
+  private announcementQueue: Promise<void> = Promise.resolve();
 
   constructor() {
     // Check local storage for preference
@@ -120,14 +122,16 @@ class AudioService {
 
     return new Promise((resolve) => {
       try {
-        window.speechSynthesis.cancel(); // Stop ongoing speech
+        window.speechSynthesis.cancel(); // Clear any stuck utterance
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = 0.9;
         utterance.pitch = 1.0;
         utterance.volume = 1.0;
 
-        utterance.onend = () => resolve();
-        utterance.onerror = () => resolve();
+        // Some browsers occasionally never fire onend; don't let that stall the queue
+        const fallback = setTimeout(() => resolve(), 15000);
+        utterance.onend = () => { clearTimeout(fallback); resolve(); };
+        utterance.onerror = () => { clearTimeout(fallback); resolve(); };
 
         // Prefer English voice
         const voices = window.speechSynthesis.getVoices();
@@ -161,8 +165,12 @@ class AudioService {
 
     const speechText = `Now serving ${spokenTicket}, please proceed to ${counterName}.`;
 
-    await this.playChime();
-    await this.speak(speechText);
+    const announce = async () => {
+      await this.playChime();
+      await this.speak(speechText);
+    };
+    this.announcementQueue = this.announcementQueue.then(announce, announce);
+    return this.announcementQueue;
   }
 }
 

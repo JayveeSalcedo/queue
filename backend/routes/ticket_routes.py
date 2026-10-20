@@ -5,7 +5,7 @@ import aiosqlite
 import csv
 import io
 
-from database import get_db
+from database import get_db, begin_write, close_stale_tickets
 from models import TicketGenerateRequest, ResetDailyRequest
 from websocket_manager import ws_manager
 from auth import get_current_user, require_role
@@ -22,7 +22,12 @@ async def generate_ticket(
         raise HTTPException(status_code=400, detail="Invalid queue type. Must be REGULAR, PRIORITY, or COMPLAINT")
 
     today = datetime.now().strftime("%Y-%m-%d")
-    
+
+    await begin_write(db)
+
+    # First ticket of a new day: close out anything left open from previous days
+    await close_stale_tickets(db)
+
     # 1. Lookup prefix from settings
     prefix_key = {
         "REGULAR": "regular_prefix",
@@ -229,6 +234,7 @@ async def void_ticket(
     If it was the most recently issued number of its queue type today, the
     daily sequence is rolled back so the next customer does not skip a number.
     """
+    await begin_write(db)
     cursor = await db.execute(
         "SELECT id, queue_number, queue_type, session_date, number_seq, status FROM tickets WHERE id = ?",
         (ticket_id,)

@@ -10,6 +10,7 @@ class UserResponse(BaseModel):
     username: str
     full_name: str
     role: str
+    counter_id: Optional[int] = None
 
 class TokenResponse(BaseModel):
     access_token: str

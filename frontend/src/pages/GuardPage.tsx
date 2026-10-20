@@ -5,12 +5,13 @@ import { useQueue } from '../context/QueueContext';
 import { thermalPrinterService } from '../services/printer';
 import { TicketPrintModal } from '../components/TicketPrintModal';
 import { ResetConfirmModal } from '../components/ResetConfirmModal';
-import { 
-  RotateCcw, 
-  Bluetooth, 
-  ListOrdered,
-  Undo2,
-  Users
+import { QUEUE_META, formatTime } from '../queueStyles';
+import {
+  RotateCcw,
+  Bluetooth,
+  ChevronDown,
+  ChevronRight,
+  Info
 } from 'lucide-react';
 
 export const GuardPage: React.FC = () => {
@@ -96,156 +97,97 @@ export const GuardPage: React.FC = () => {
     }
   };
 
-  const regPrefix = settings.regular_prefix || 'R';
-  const priPrefix = settings.priority_prefix || 'P';
-  const compPrefix = settings.complaint_prefix || 'C';
+  const prefixes: Record<QueueType, string> = {
+    REGULAR: settings.regular_prefix || 'R',
+    PRIORITY: settings.priority_prefix || 'P',
+    COMPLAINT: settings.complaint_prefix || 'C',
+  };
 
   return (
-    <div className="max-w-xl mx-auto px-4 py-6 space-y-6">
-      {/* Station Header & Bluetooth Printer Bar */}
-      <div className="bg-white rounded-3xl p-5 shadow-sm border border-emerald-100 flex items-center justify-between">
+    <div className="max-w-xl mx-auto px-4 py-6 space-y-5">
+      {/* Station Header & Bluetooth Printer Status */}
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-emerald-950 flex items-center space-x-1.5">
-            <span>Guard Ticketing</span>
-          </h1>
-          <p className="text-xs text-slate-500 font-medium">1-tap ticket issuing & 58mm thermal print</p>
+          <h1 className="page-title">Issue a ticket</h1>
+          <p className="page-subtitle">Tap the customer's service to print their number.</p>
         </div>
 
-        {/* Bluetooth status / connect button */}
         <button
           onClick={handleConnectBluetooth}
-          className={`flex items-center space-x-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all shadow-sm ${
+          className={`btn btn-sm shrink-0 ${
             bluetoothConnected
-              ? 'bg-emerald-100 text-emerald-900 border-2 border-emerald-400'
-              : 'bg-amber-100 hover:bg-amber-200 text-amber-950 border-2 border-amber-300'
+              ? 'bg-emerald-50 text-emerald-800 ring-1 ring-inset ring-emerald-200'
+              : 'btn-secondary'
           }`}
+          title={bluetoothConnected ? 'Printer connected' : 'Connect a 58mm Bluetooth printer'}
         >
-          <Bluetooth className="w-5 h-5 text-emerald-800" />
-          <span>{bluetoothConnected ? (printerDeviceName || 'Printer Paired') : 'Pair 58mm'}</span>
+          <Bluetooth className="w-4 h-4" />
+          <span className="max-w-[8rem] truncate">
+            {bluetoothConnected ? printerDeviceName || 'Printer ready' : 'Connect printer'}
+          </span>
         </button>
       </div>
 
-      {/* 1-Tap EXTRA LARGE Generation Buttons */}
-      <div className="space-y-4">
-        {/* Regular Queue Button */}
-        <button
-          onClick={() => handleGenerateTicket('REGULAR')}
-          disabled={isGenerating}
-          className="w-full relative group overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-800 via-emerald-700 to-emerald-800 hover:from-emerald-700 hover:to-emerald-600 text-white p-6 sm:p-7 shadow-xl hover:shadow-2xl active:scale-98 transition-all text-left border-3 border-emerald-900 cursor-pointer"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-5">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-950/70 border-2 border-emerald-400 flex items-center justify-center font-mono font-black text-3xl text-amber-300 shadow-inner">
-                {regPrefix}
+      {/* 1-Tap Generation Buttons */}
+      <div className="space-y-3">
+        {(['REGULAR', 'PRIORITY', 'COMPLAINT'] as QueueType[]).map((q) => {
+          const meta = QUEUE_META[q];
+          return (
+            <button
+              key={q}
+              onClick={() => handleGenerateTicket(q)}
+              disabled={isGenerating}
+              className="card w-full p-4 sm:p-5 flex items-center gap-4 text-left cursor-pointer hover:border-slate-300 hover:shadow-md active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-wait focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+            >
+              <div
+                className={`w-14 h-14 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center text-2xl sm:text-3xl font-bold shrink-0 ${meta.solid}`}
+              >
+                {prefixes[q]}
               </div>
-              <div>
-                <span className="text-2xl sm:text-3xl font-black block tracking-tight">REGULAR</span>
-                <span className="text-xs sm:text-sm text-emerald-200 font-semibold block mt-0.5">Counter 1 • Standard Inquiries</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-lg sm:text-xl font-semibold text-slate-900">{meta.label}</div>
+                <div className="text-sm text-slate-500 truncate">
+                  {meta.counter} · {meta.description}
+                </div>
               </div>
-            </div>
-            <div className="text-right">
-              <span className="inline-block px-3.5 py-1.5 rounded-xl bg-emerald-950 text-amber-300 font-mono font-black text-base shadow-sm">
-                {waitingCounts.REGULAR} waiting
-              </span>
-            </div>
-          </div>
-        </button>
-
-        {/* Priority Queue Button */}
-        <button
-          onClick={() => handleGenerateTicket('PRIORITY')}
-          disabled={isGenerating}
-          className="w-full relative group overflow-hidden rounded-3xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 hover:from-amber-300 hover:to-amber-400 text-emerald-950 p-6 sm:p-7 shadow-xl hover:shadow-2xl active:scale-98 transition-all text-left border-3 border-amber-600 cursor-pointer"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-5">
-              <div className="w-16 h-16 rounded-2xl bg-amber-700/25 border-2 border-amber-700 flex items-center justify-center font-mono font-black text-3xl text-emerald-950 shadow-inner">
-                {priPrefix}
+              <div className="text-right shrink-0">
+                <div className="text-xl font-semibold tabular-nums text-slate-900">{waitingCounts[q]}</div>
+                <div className="text-xs text-slate-500">waiting</div>
               </div>
-              <div>
-                <span className="text-2xl sm:text-3xl font-black block tracking-tight">PRIORITY</span>
-                <span className="text-xs sm:text-sm text-amber-950 font-bold block mt-0.5">Counter 2 • Seniors, PWD, Pregnant</span>
-              </div>
-            </div>
-            <div className="text-right">
-              <span className="inline-block px-3.5 py-1.5 rounded-xl bg-emerald-950 text-amber-300 font-mono font-black text-base shadow-sm">
-                {waitingCounts.PRIORITY} waiting
-              </span>
-            </div>
-          </div>
-        </button>
-
-        {/* Request / Complaint Queue Button */}
-        <button
-          onClick={() => handleGenerateTicket('COMPLAINT')}
-          disabled={isGenerating}
-          className="w-full relative group overflow-hidden rounded-3xl bg-gradient-to-r from-teal-800 via-teal-700 to-teal-800 hover:from-teal-700 hover:to-teal-600 text-white p-6 sm:p-7 shadow-xl hover:shadow-2xl active:scale-98 transition-all text-left border-3 border-teal-900 cursor-pointer"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-5">
-              <div className="w-16 h-16 rounded-2xl bg-teal-950/70 border-2 border-teal-400 flex items-center justify-center font-mono font-black text-3xl text-amber-300 shadow-inner">
-                {compPrefix}
-              </div>
-              <div>
-                <span className="text-2xl sm:text-3xl font-black block tracking-tight">REQUEST / COMPLAINT</span>
-                <span className="text-xs sm:text-sm text-teal-200 font-semibold block mt-0.5">Counter 3 • Formal Complaints & Inquiries</span>
-              </div>
-            </div>
-            <div className="text-right">
-              <span className="inline-block px-3.5 py-1.5 rounded-xl bg-teal-950 text-amber-300 font-mono font-black text-base shadow-sm">
-                {waitingCounts.COMPLAINT} waiting
-              </span>
-            </div>
-          </div>
-        </button>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Today's Queue Status Grid & Side Drawer Toggle */}
-      <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-200 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            Current Waiting Summary
-          </h3>
-          <button
-            onClick={() => setShowQueueList(!showQueueList)}
-            className="text-xs font-bold text-emerald-800 hover:text-emerald-950 flex items-center space-x-1"
-          >
-            <ListOrdered className="w-4 h-4 text-emerald-700" />
-            <span>{showQueueList ? 'Hide Queue List' : 'View In-Queue List'}</span>
-          </button>
-        </div>
+      {/* In-queue list for the guard */}
+      <div className="card">
+        <button
+          onClick={() => setShowQueueList(!showQueueList)}
+          className="w-full px-5 py-4 flex items-center justify-between text-left cursor-pointer"
+        >
+          <div>
+            <div className="card-title">Customers in line</div>
+            <div className="text-xs text-slate-500 mt-0.5">{waitingCounts.TOTAL} waiting across all counters</div>
+          </div>
+          {showQueueList ? (
+            <ChevronDown className="w-5 h-5 text-slate-400" />
+          ) : (
+            <ChevronRight className="w-5 h-5 text-slate-400" />
+          )}
+        </button>
 
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
-            <span className="text-3xl font-black text-emerald-800 font-mono">{waitingCounts.REGULAR}</span>
-            <span className="block text-xs font-bold text-emerald-950 mt-1">Regular</span>
-          </div>
-          <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200">
-            <span className="text-3xl font-black text-amber-800 font-mono">{waitingCounts.PRIORITY}</span>
-            <span className="block text-xs font-bold text-amber-950 mt-1">Priority</span>
-          </div>
-          <div className="p-3.5 rounded-2xl bg-teal-50 border border-teal-200">
-            <span className="text-3xl font-black text-teal-800 font-mono">{waitingCounts.COMPLAINT}</span>
-            <span className="block text-xs font-bold text-teal-950 mt-1">Complaint</span>
-          </div>
-        </div>
-
-        {/* Optional Collapsible In-Queue List for Guard */}
         {showQueueList && (
-          <div className="pt-3 border-t border-slate-100 space-y-2 max-h-60 overflow-y-auto">
+          <div className="border-t border-slate-200 max-h-72 overflow-y-auto divide-y divide-slate-100">
             {waitingTickets.length === 0 ? (
-              <p className="text-xs text-slate-400 italic text-center py-2">No customers waiting in line.</p>
+              <p className="text-sm text-slate-500 text-center py-6">No customers waiting.</p>
             ) : (
-              waitingTickets.map((t, idx) => (
-                <div key={t.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 text-xs">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-mono text-slate-400 font-bold">#{idx + 1}</span>
-                    <span className="font-mono font-black text-base text-emerald-950">{t.queue_number}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-white border border-slate-200">
-                      {t.queue_type}
-                    </span>
+              waitingTickets.map((t) => (
+                <div key={t.id} className="px-5 py-2.5 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="ticket-no text-base text-slate-900 w-16">{t.queue_number}</span>
+                    <span className={`badge ${QUEUE_META[t.queue_type].chip}`}>{QUEUE_META[t.queue_type].label}</span>
                   </div>
-                  <span className="text-slate-400 font-medium">{t.created_at?.split(' ')[1] || ''}</span>
+                  <span className="text-xs text-slate-500 tabular-nums">{formatTime(t.created_at)}</span>
                 </div>
               ))
             )}
@@ -255,48 +197,41 @@ export const GuardPage: React.FC = () => {
 
       {/* Undo strip: tickets issued from this phone, voidable while still waiting */}
       {(issuedThisSession.length > 0 || voidNotice) && (
-        <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-200 space-y-3">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center space-x-1.5">
-            <Undo2 className="w-4 h-4 text-red-500" />
-            <span>Issued from this device - tap Void to undo a mis-tap</span>
-          </h3>
+        <div className="card">
+          <div className="card-header">
+            <div>
+              <div className="card-title">Issued from this device</div>
+              <div className="text-xs text-slate-500 mt-0.5">Void a ticket printed by mistake.</div>
+            </div>
+          </div>
 
           {voidNotice && (
-            <div className="text-xs font-bold px-3 py-2 rounded-xl bg-amber-50 text-amber-900 border border-amber-300">
-              {voidNotice}
+            <div className="mx-5 mt-4 flex items-start gap-2 text-sm px-3 py-2 rounded-lg bg-amber-50 text-amber-900 ring-1 ring-inset ring-amber-200">
+              <Info className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{voidNotice}</span>
             </div>
           )}
 
-          <div className="space-y-2">
+          <div className="divide-y divide-slate-100">
             {issuedThisSession.map((t) => {
               const stillWaiting = (waitingTickets || []).some((w) => w.id === t.id);
               return (
-                <div
-                  key={t.id}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100"
-                >
-                  <div className="flex items-center space-x-2.5">
-                    <span className="font-mono font-black text-base text-emerald-950">{t.queue_number}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-white border border-slate-200 text-slate-600">
-                      {t.queue_type}
-                    </span>
-                    <span className="text-[11px] text-slate-400 font-medium">
-                      {t.time_formatted || ''}
-                    </span>
+                <div key={t.id} className="px-5 py-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="ticket-no text-base text-slate-900">{t.queue_number}</span>
+                    <span className="text-xs text-slate-500">{t.time_formatted || ''}</span>
                   </div>
 
                   {stillWaiting ? (
                     <button
                       onClick={() => handleVoidTicket(t.id)}
                       disabled={voidingId === t.id}
-                      className="px-3 py-1.5 rounded-lg text-xs font-black bg-white hover:bg-red-50 text-red-700 border border-red-300 disabled:opacity-60 transition-all"
+                      className="btn btn-danger-outline btn-sm"
                     >
-                      {voidingId === t.id ? 'Voiding...' : 'Void'}
+                      {voidingId === t.id ? 'Voiding…' : 'Void'}
                     </button>
                   ) : (
-                    <span className="text-[11px] font-bold text-slate-400 italic px-2">
-                      Already called - cannot void
-                    </span>
+                    <span className="text-xs text-slate-400">Already called</span>
                   )}
                 </div>
               );
@@ -305,14 +240,11 @@ export const GuardPage: React.FC = () => {
         </div>
       )}
 
-      {/* Daily Reset Button */}
+      {/* Daily Reset */}
       <div className="pt-2">
-        <button
-          onClick={() => setIsResetModalOpen(true)}
-          className="w-full py-4 px-4 rounded-2xl bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-950 border border-slate-300 hover:border-amber-400 font-black text-sm sm:text-base flex items-center justify-center space-x-2 transition-all shadow-sm"
-        >
-          <RotateCcw className="w-5 h-5 text-amber-600" />
-          <span>Start New Day / Reset Numbers to 001</span>
+        <button onClick={() => setIsResetModalOpen(true)} className="btn btn-secondary w-full py-3">
+          <RotateCcw className="w-4 h-4" />
+          Start new day (reset numbers to 001)
         </button>
       </div>
 

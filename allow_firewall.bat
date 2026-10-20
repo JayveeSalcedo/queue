@@ -19,12 +19,11 @@ netsh advfirewall firewall add rule name="Queue System (Port 8000)" dir=in actio
 
 echo.
 echo ======================================================================
-echo [SUCCESS] Port 8000 is now open to your local Wi-Fi!
+echo [SUCCESS] Port 8000 is now open to your office network (LAN cable and Wi-Fi)!
 echo.
-echo You can now open this URL on your phone's browser:
-echo   http://192.168.1.51:8000
-echo   http://192.168.1.51:8000/guard
-echo   http://192.168.1.51:8000/counter/1
+echo Other PCs and phones can now open the system. Run start_server.bat
+echo to see this PC's address on each network connection, e.g.
+echo   http://^<this PC's address^>:8000
 echo ======================================================================
 echo.
 pause

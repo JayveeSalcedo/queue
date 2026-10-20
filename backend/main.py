@@ -60,12 +60,25 @@ async def websocket_endpoint(websocket: WebSocket):
 async def get_network_info():
     hostname = socket.gethostname()
     ip_addresses = []
+
+    # The address on the connection that has the router (default route) goes first.
+    # No packet is sent; this only asks the OS which interface it would use.
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("10.255.255.255", 1))
+        routed_ip = s.getsockname()[0]
+        s.close()
+        if not routed_ip.startswith("127."):
+            ip_addresses.append(routed_ip)
+    except Exception:
+        pass
+
     try:
         # Get all local IP addresses
         addr_infos = socket.getaddrinfo(hostname, None)
         for item in addr_infos:
             ip = item[4][0]
-            if ":" not in ip and not ip.startswith("127."):
+            if ":" not in ip and not ip.startswith("127.") and not ip.startswith("169.254."):
                 if ip not in ip_addresses:
                     ip_addresses.append(ip)
     except Exception:

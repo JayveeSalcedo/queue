@@ -29,6 +29,37 @@ async def get_db():
     finally:
         await db.close()
 
+async def begin_write(db):
+    """
+    Take SQLite's write lock before reading the rows a request is about to change,
+    so two simultaneous requests (two guard taps, two counters calling) cannot both
+    read the same next number / next ticket. The other request waits for the lock.
+    """
+    await db.execute("BEGIN IMMEDIATE")
+
+async def close_stale_tickets(db):
+    """
+    Cancels tickets left open from previous days and frees any counter still holding
+    one, so yesterday's leftovers never linger if nobody pressed Reset. Does not commit.
+    """
+    today = datetime.now().strftime("%Y-%m-%d")
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    await db.execute(
+        """
+        UPDATE counters SET current_ticket_id = NULL
+        WHERE current_ticket_id IN (SELECT id FROM tickets WHERE session_date < ?)
+        """,
+        (today,)
+    )
+    await db.execute(
+        """
+        UPDATE tickets
+        SET status = 'CANCELLED', completed_at = ?, notes = COALESCE(notes || ' ', '') || '[Auto-closed: previous day]'
+        WHERE session_date < ? AND status IN ('WAITING', 'CALLED', 'SERVING', 'SKIPPED')
+        """,
+        (now_str, today)
+    )
+
 async def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     async with aiosqlite.connect(DB_PATH) as db:
@@ -123,6 +154,18 @@ async def init_db():
             await db.execute("INSERT INTO users (username, password_hash, full_name, role) VALUES ('counter2', ?, 'Counter 2 Operator', 'COUNTER')", (c2_pwd,))
             await db.execute("INSERT INTO users (username, password_hash, full_name, role) VALUES ('counter3', ?, 'Counter 3 Operator', 'COUNTER')", (c3_pwd,))
 
+        # Link counter accounts to the counter they operate (added after first release,
+        # so older databases get the column here)
+        cursor = await db.execute("PRAGMA table_info(users)")
+        user_columns = [r[1] for r in await cursor.fetchall()]
+        if "counter_id" not in user_columns:
+            await db.execute("ALTER TABLE users ADD COLUMN counter_id INTEGER REFERENCES counters(id)")
+        for n in (1, 2, 3):
+            await db.execute(
+                "UPDATE users SET counter_id = ? WHERE username = ? AND role = 'COUNTER' AND counter_id IS NULL",
+                (n, f"counter{n}")
+            )
+
         # Seed default settings
         default_settings = [
             ("office_name", "PANELCO III SOUTHEAST AREA OFFICE"),
@@ -141,5 +184,7 @@ async def init_db():
         today = datetime.now().strftime("%Y-%m-%d")
         for q_type in ["REGULAR", "PRIORITY", "COMPLAINT"]:
             await db.execute("INSERT OR IGNORE INTO queue_sequences (queue_type, current_seq, session_date) VALUES (?, 0, ?)", (q_type, today))
+
+        await close_stale_tickets(db)
 
         await db.commit()

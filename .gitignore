@@ -1,0 +1,7 @@
+# Local-only files
+.DS_Store
+backend/venv/
+
+# SQLite temporary files written while the server runs
+*.db-shm
+*.db-wal

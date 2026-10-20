@@ -2,7 +2,7 @@ import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useQueue } from '../context/QueueContext';
-import { Volume2, VolumeX, Wifi, WifiOff, LogOut, LogIn } from 'lucide-react';
+import { Volume2, VolumeX, LogOut, LogIn } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -19,108 +19,99 @@ export const Navbar: React.FC = () => {
   // Determine current station label based strictly on current URL
   let stationLabel = '';
   if (location.pathname.startsWith('/counter/1')) {
-    stationLabel = 'COUNTER 1 • REGULAR';
+    stationLabel = 'Counter 1 · Regular';
   } else if (location.pathname.startsWith('/counter/2')) {
-    stationLabel = 'COUNTER 2 • PRIORITY';
+    stationLabel = 'Counter 2 · Priority';
   } else if (location.pathname.startsWith('/counter/3')) {
-    stationLabel = 'COUNTER 3 • REQUEST / COMPLAINT';
+    stationLabel = 'Counter 3 · Request / Complaint';
   } else if (location.pathname.startsWith('/counter')) {
-    stationLabel = 'COUNTER WORKSTATION';
+    stationLabel = 'Counter Workstation';
   } else if (location.pathname.startsWith('/guard')) {
-    stationLabel = 'GUARD STATION';
+    stationLabel = 'Guard Station';
   } else if (location.pathname.startsWith('/admin')) {
-    stationLabel = 'ADMIN DASHBOARD';
+    stationLabel = 'Administration';
   } else if (location.pathname.startsWith('/login')) {
-    stationLabel = 'STAFF LOGIN';
+    stationLabel = 'Staff Sign In';
   } else {
-    stationLabel = 'LOCAL QUEUE SYSTEM';
+    stationLabel = 'Queue Management System';
   }
 
   return (
-    <header className="bg-emerald-900 border-b-4 border-amber-400 text-white shadow-md sticky top-0 z-30">
+    <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
+      <div className="h-1 bg-gradient-to-r from-emerald-800 via-emerald-700 to-amber-400" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-16 gap-3">
           {/* Office Name & Specific Station Title */}
-          <div className="flex items-center space-x-3">
+          <Link to="/" className="flex items-center gap-3 min-w-0">
             <img
               src="/logo.png"
               alt="PANELCO III logo"
-              className="w-10 h-10 rounded-full bg-white object-contain p-0.5 shadow-md shrink-0"
+              className="w-9 h-9 rounded-full object-contain shrink-0 ring-1 ring-slate-200"
             />
-            <div>
-              <span className="font-extrabold text-base sm:text-lg tracking-tight text-white block leading-tight">
+            <div className="min-w-0">
+              <span className="block text-sm font-semibold text-slate-900 leading-tight truncate">
                 {officeName}
               </span>
-              <span className="text-xs text-amber-300 font-black tracking-wider uppercase block">
-                {stationLabel}
-              </span>
+              <span className="block text-xs text-slate-500 truncate">{stationLabel}</span>
             </div>
-          </div>
+          </Link>
 
-          {/* Right Status Controls (Audio, Connection, Logout) - No links to other screens */}
-          <div className="flex items-center space-x-3">
+          {/* Right Status Controls (Audio, Connection, Account) */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Connection Indicator */}
+            <div
+              className={`badge ${
+                isConnected
+                  ? 'bg-emerald-50 text-emerald-800 ring-1 ring-inset ring-emerald-200'
+                  : 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200'
+              }`}
+              title={isConnected ? 'Connected to Queue Server' : 'Reconnecting to Server...'}
+            >
+              <span className="relative flex w-2 h-2">
+                {isConnected && (
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60 animate-ping" />
+                )}
+                <span
+                  className={`relative inline-flex w-2 h-2 rounded-full ${
+                    isConnected ? 'bg-emerald-500' : 'bg-red-500'
+                  }`}
+                />
+              </span>
+              <span className="hidden sm:inline">{isConnected ? 'Connected' : 'Reconnecting'}</span>
+            </div>
+
             {/* Audio Toggle */}
             <button
               onClick={enableAudio}
               title={isAudioEnabled ? 'Mute Chime & Speech' : 'Enable Chime & Speech'}
-              className={`p-2 rounded-xl transition-colors ${
-                isAudioEnabled
-                  ? 'bg-emerald-800 text-amber-300 hover:bg-emerald-700'
-                  : 'bg-emerald-950 text-slate-400 hover:bg-emerald-900'
-              }`}
+              className="btn btn-ghost p-2"
             >
-              {isAudioEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+              {isAudioEnabled ? (
+                <Volume2 className="w-5 h-5" />
+              ) : (
+                <VolumeX className="w-5 h-5 text-slate-400" />
+              )}
             </button>
 
-            {/* Connection Indicator */}
-            <div
-              className={`flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                isConnected
-                  ? 'bg-emerald-800/80 text-emerald-200 border border-emerald-600'
-                  : 'bg-red-950 text-red-300 border border-red-700 animate-pulse'
-              }`}
-              title={isConnected ? 'Connected to Queue Server' : 'Reconnecting to Server...'}
-            >
-              {isConnected ? (
-                <>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                  <Wifi className="w-3.5 h-3.5 text-emerald-400 ml-1" />
-                  <span className="hidden sm:inline">Online</span>
-                </>
-              ) : (
-                <>
-                  <WifiOff className="w-3.5 h-3.5 text-red-400" />
-                  <span className="hidden sm:inline">Offline</span>
-                </>
-              )}
-            </div>
-
-            {/* User Info & Logout */}
             {!isAuthenticated && location.pathname !== '/login' && (
               <Link
                 to="/login"
                 state={{ from: location.pathname }}
-                className="flex items-center space-x-1.5 pl-2 ml-1 border-l border-emerald-800 text-amber-300 hover:text-white font-bold text-xs"
+                className="btn btn-secondary btn-sm"
                 title="Sign in to this station"
               >
-                <span className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-800 hover:bg-emerald-700 transition-colors">
-                  <LogIn className="w-4 h-4" />
-                  <span className="hidden sm:inline">Sign In</span>
-                </span>
+                <LogIn className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign in</span>
               </Link>
             )}
 
             {isAuthenticated && user && (
-              <div className="flex items-center space-x-2 pl-2 border-l border-emerald-800">
+              <div className="flex items-center gap-3 pl-2 sm:pl-3 ml-1 border-l border-slate-200">
                 <div className="hidden sm:block text-right">
-                  <div className="text-xs font-bold text-white leading-none">{user.full_name}</div>
-                  <div className="text-[10px] text-amber-300 font-semibold">{user.role}</div>
+                  <div className="text-sm font-medium text-slate-900 leading-tight">{user.full_name}</div>
+                  <div className="text-xs text-slate-500 capitalize">{user.role.toLowerCase()}</div>
                 </div>
-                <button
-                  onClick={logout}
-                  title="Logout"
-                  className="p-1.5 rounded-xl bg-emerald-800 text-emerald-200 hover:bg-red-800 hover:text-white transition-colors"
-                >
+                <button onClick={logout} title="Sign out" className="btn btn-ghost p-2">
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>

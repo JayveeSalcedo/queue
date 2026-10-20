@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Ticket } from '../types';
 import { thermalPrinterService } from '../services/printer';
+import { QUEUE_META } from '../queueStyles';
 import { Printer, Bluetooth, CheckCircle2, X, Undo2, AlertTriangle } from 'lucide-react';
 
 interface Props {
@@ -69,109 +70,81 @@ export const TicketPrintModal: React.FC<Props> = ({
     thermalPrinterService.printViaBrowser(ticket);
   };
 
-  const queueColor =
-    ticket.queue_type === 'REGULAR'
-      ? 'bg-emerald-600 text-white'
-      : ticket.queue_type === 'PRIORITY'
-      ? 'bg-amber-400 text-emerald-950 font-black'
-      : 'bg-teal-700 text-white';
+  const meta = QUEUE_META[ticket.queue_type];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden border-2 border-emerald-700 flex flex-col">
+    <div className="modal-backdrop">
+      <div className="modal max-w-sm flex flex-col" role="dialog" aria-modal="true" aria-labelledby="ticket-title">
         {/* Header */}
-        <div className="bg-emerald-800 text-white px-5 py-4 flex items-center justify-between border-b-2 border-amber-400">
-          <div className="flex items-center space-x-2">
-            <CheckCircle2 className="w-6 h-6 text-amber-300" />
-            <span className="font-extrabold text-lg">Ticket Generated</span>
+        <div className="card-header">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+            <h2 id="ticket-title" className="text-base font-semibold text-slate-900">
+              Ticket issued
+            </h2>
           </div>
-          <button
-            onClick={onClose}
-            className="text-emerald-200 hover:text-white p-1 rounded-lg"
-          >
+          <button onClick={onClose} className="btn btn-ghost p-1.5" title="Close">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Ticket Visual Card */}
-        <div className="p-6 text-center bg-slate-50 flex flex-col items-center">
-          <div className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2 ${queueColor}`}>
-            {ticket.queue_type} QUEUE
+        {/* Ticket preview */}
+        <div className="px-6 pt-6 pb-5 bg-slate-50">
+          <div className="bg-white rounded-lg border border-dashed border-slate-300 px-6 py-6 text-center">
+            <span className={`badge ${meta.chip}`}>{meta.label}</span>
+            <div className="ticket-no text-6xl text-slate-900 mt-3 select-all">{ticket.queue_number}</div>
+            <p className="mt-2 text-sm text-slate-500">
+              {meta.counter} · Issued {ticket.time_formatted || new Date(ticket.created_at).toLocaleTimeString()}
+            </p>
           </div>
-
-          <div className="text-6xl font-black tracking-tight text-emerald-950 my-2 select-all font-mono">
-            {ticket.queue_number}
-          </div>
-
-          <p className="text-sm text-slate-500 font-medium">
-            Issued at {ticket.time_formatted || new Date(ticket.created_at).toLocaleTimeString()}
-          </p>
 
           {printStatus && (
-            <div className="mt-3 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
+            <div className="mt-3 text-sm px-3 py-2 rounded-lg bg-white text-slate-700 ring-1 ring-inset ring-slate-200 text-center">
               {printStatus}
             </div>
           )}
         </div>
 
-        {/* Dual Print Action Buttons */}
-        <div className="p-5 bg-white border-t border-slate-200 space-y-3">
-          <button
-            onClick={handleBluetoothPrint}
-            className="w-full py-3.5 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-base flex items-center justify-center space-x-2 shadow-md hover:shadow-lg transition-all"
-          >
-            <Bluetooth className="w-5 h-5 text-amber-300" />
-            <span>Print Bluetooth (58mm)</span>
+        {/* Actions */}
+        <div className="p-5 border-t border-slate-200 space-y-2.5">
+          <button onClick={handleBluetoothPrint} className="btn btn-primary w-full py-3">
+            <Bluetooth className="w-4 h-4" />
+            Print to Bluetooth printer
           </button>
 
-          <button
-            onClick={handleBrowserPrint}
-            className="w-full py-2.5 px-4 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold text-sm flex items-center justify-center space-x-2 transition-all"
-          >
-            <Printer className="w-4 h-4 text-amber-700" />
-            <span>Browser Print Dialog</span>
-          </button>
-
-          <button
-            onClick={onClose}
-            autoFocus
-            className="w-full py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-all"
-          >
-            Done (Next Customer)
-          </button>
+          <div className="grid grid-cols-2 gap-2.5">
+            <button onClick={handleBrowserPrint} className="btn btn-secondary">
+              <Printer className="w-4 h-4" />
+              Browser print
+            </button>
+            <button onClick={onClose} autoFocus className="btn btn-secondary">
+              Done
+            </button>
+          </div>
 
           {/* Undo / Void - for mis-taps. Two-step so it can't be hit by accident. */}
-          <button
-            onClick={handleVoid}
-            disabled={isVoiding}
-            className={`w-full py-2.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center space-x-2 transition-all disabled:opacity-60 ${
-              confirmVoid
-                ? 'bg-red-600 hover:bg-red-700 text-white border-2 border-red-800 shadow-md'
-                : 'bg-white hover:bg-red-50 text-red-700 border border-red-300'
-            }`}
-          >
+          <div className="pt-2.5 mt-1 border-t border-slate-100">
             {confirmVoid ? (
-              <AlertTriangle className="w-4 h-4" />
+              <div className="flex gap-2.5">
+                <button
+                  onClick={() => setConfirmVoid(false)}
+                  disabled={isVoiding}
+                  className="btn btn-secondary flex-1"
+                >
+                  Keep ticket
+                </button>
+                <button onClick={handleVoid} disabled={isVoiding} className="btn btn-danger flex-1">
+                  <AlertTriangle className="w-4 h-4" />
+                  {isVoiding ? 'Voiding…' : `Void ${ticket.queue_number}`}
+                </button>
+              </div>
             ) : (
-              <Undo2 className="w-4 h-4" />
+              <button onClick={handleVoid} className="btn btn-ghost w-full text-red-700 hover:bg-red-50 hover:text-red-800">
+                <Undo2 className="w-4 h-4" />
+                Wrong button? Void this ticket
+              </button>
             )}
-            <span>
-              {isVoiding
-                ? 'Voiding...'
-                : confirmVoid
-                ? `Tap again to void ${ticket.queue_number}`
-                : 'Undo - wrong button / mis-tap'}
-            </span>
-          </button>
-
-          {confirmVoid && !isVoiding && (
-            <button
-              onClick={() => setConfirmVoid(false)}
-              className="w-full text-xs font-semibold text-slate-500 hover:text-slate-700 py-1"
-            >
-              Keep this ticket
-            </button>
-          )}
+          </div>
         </div>
       </div>
     </div>
