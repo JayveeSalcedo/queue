@@ -1,174 +1,86 @@
 import React, { useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import {
-  CheckCircle,
-  ChevronRight,
-  Maximize2,
-  Pause,
-  Play as PlayIcon,
-  SkipForward,
-  Users,
-  Volume2,
-} from 'lucide-react';
+import { useParams } from 'react-router-dom';
+import { CheckCircle, ChevronRight, Pause, Play as PlayIcon, SkipForward, Volume2 } from 'lucide-react';
 import { useQueue } from '../context/QueueContext';
 import { useCounterControl } from '../hooks/useCounterControl';
-import { QUEUE_META, formatTime } from '../queueStyles';
 
 /**
- * Compact counter controller for a small always-handy window (about 360x560):
- * the number being served and the buttons staff press all day. Anything
- * rarer (transfer, the waiting list, on-hold customers) lives on the full page.
+ * Compact counter controller: a small wide strip with only the buttons used
+ * all day. The customer being served is shown in the window title (and so on
+ * the taskbar) and on the Complete button; the waiting count is on Next.
+ * Anything rarer (transfer, waiting list, on-hold) lives on the full page.
  */
 export const CounterMiniPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const counterId = id ? parseInt(id, 10) || 1 : 1;
   const { isConnected } = useQueue();
   const c = useCounterControl(counterId);
-  const meta = QUEUE_META[c.counter.queue_type];
+  const serving = c.currentTicket?.queue_number ?? null;
 
-  // The taskbar shows the title, so staff can see who is being served at a glance
   useEffect(() => {
-    document.title = c.currentTicket
-      ? `${c.currentTicket.queue_number} · ${c.counter.name}`
-      : `${c.counter.name} · idle`;
-  }, [c.currentTicket, c.counter.name]);
+    document.title = serving ? `${serving} · ${c.counter.name}` : `${c.counter.name} · idle`;
+  }, [serving, c.counter.name]);
 
-  const coveringText = c.covering.length
-    ? `Also calling ${c.covering.map((x) => QUEUE_META[x.queue_type].label.toLowerCase()).join(' & ')}`
-    : null;
+  // One line under the buttons: a message, an error, or lost connection
+  const status = !isConnected
+    ? { kind: 'error' as const, text: 'Lost connection to the queue server. Reconnecting…' }
+    : c.notice;
+
+  const tile = 'h-full flex-col gap-0.5 rounded-xl px-1 leading-tight';
+  // In a very short window drop the icons and keep the labels readable
+  const icon = '[@media(max-height:104px)]:hidden';
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col p-3 gap-3 select-none">
-      {/* Title row */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span
-              className={`w-2 h-2 rounded-full shrink-0 ${isConnected ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`}
-              title={isConnected ? 'Connected' : 'Reconnecting…'}
-            />
-            <h1 className="text-base font-semibold text-slate-900 truncate">{c.counter.name}</h1>
-            <span className={`badge ${meta.chip}`}>{meta.label}</span>
-          </div>
-        </div>
-        <Link
-          to={`/counter/${counterId}`}
-          target="_blank"
-          title="Open the full counter page"
-          className="btn btn-ghost btn-sm p-1.5 shrink-0"
-          onClick={(e) => {
-            // Inside the always-on-top QueueMini app a new tab has nowhere to open:
-            // ask the app to open the normal browser instead
-            const bridge = (window as unknown as { pywebview?: { api?: { open_full?: (p: string) => void } } }).pywebview;
-            if (bridge?.api?.open_full) {
-              e.preventDefault();
-              bridge.api.open_full(`/counter/${counterId}`);
-            }
-          }}
-        >
-          <Maximize2 className="w-4 h-4" />
-        </Link>
-      </div>
-
-      {!isConnected && (
-        <div className="rounded-lg bg-red-50 text-red-700 ring-1 ring-inset ring-red-200 px-3 py-2 text-xs">
-          Lost connection to the queue server. Reconnecting…
-        </div>
-      )}
-
-      {/* Now serving */}
-      <div className="card px-4 py-5 text-center">
-        {c.isPaused ? (
-          <>
-            <div className="eyebrow text-amber-600">Counter paused</div>
-            <div className="mt-2 text-3xl font-semibold text-slate-300">Closed</div>
-            <p className="mt-1 text-xs text-slate-500">Waiting customers go to the other counter.</p>
-          </>
-        ) : (
-          <>
-            <div className="eyebrow">Now serving</div>
-            {c.currentTicket ? (
-              <>
-                <div className="ticket-no text-6xl text-slate-900 mt-1 select-all">{c.currentTicket.queue_number}</div>
-                <div className="text-xs text-slate-500 mt-1">
-                  Called at {formatTime(c.currentTicket.called_at) || 'just now'}
-                </div>
-              </>
-            ) : (
-              <div className="py-3">
-                <div className="text-3xl font-semibold text-slate-300">—</div>
-                <div className="text-xs text-slate-500 mt-1">No customer at the counter</div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* The one button used most */}
-      <button
-        onClick={c.callNext}
-        disabled={c.isBusy || c.isPaused}
-        className="btn btn-primary text-lg py-4 rounded-xl"
-      >
-        {c.isPaused ? (
-          'Counter paused'
-        ) : (
-          <>
-            Next customer
-            <ChevronRight className="w-5 h-5" />
-          </>
-        )}
-      </button>
-
-      {/* Actions on the customer at the counter */}
-      <div className="grid grid-cols-3 gap-2">
-        <button onClick={c.complete} disabled={c.isBusy || !c.currentTicket} className="btn btn-secondary flex-col gap-1 py-3">
-          <CheckCircle className="w-5 h-5 text-emerald-600" />
-          Complete
-        </button>
-        <button onClick={c.recall} disabled={c.isBusy || !c.currentTicket} className="btn btn-secondary flex-col gap-1 py-3">
-          <Volume2 className="w-5 h-5 text-slate-500" />
-          Recall
-        </button>
-        <button onClick={c.skip} disabled={c.isBusy || !c.currentTicket} className="btn btn-secondary flex-col gap-1 py-3">
-          <SkipForward className="w-5 h-5 text-slate-500" />
-          Skip
-        </button>
-      </div>
-
-      {c.inCoverGroup && (
+    <div className="h-screen bg-slate-50 flex flex-col gap-1 p-2 select-none overflow-hidden">
+      <div className="flex-1 min-h-0 flex gap-2">
         <button
-          onClick={c.togglePause}
-          disabled={c.isBusy}
-          className={`btn ${c.isPaused ? 'btn-primary' : 'btn-secondary'}`}
-          title={c.isPaused ? 'Resume taking customers' : 'Pause: waiting customers go to the other counter'}
+          onClick={c.callNext}
+          disabled={c.isBusy || c.isPaused}
+          className={`btn btn-primary ${tile} flex-[1.8]`}
         >
-          {c.isPaused ? <PlayIcon className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-          {c.isPaused ? 'Resume counter' : 'Pause counter'}
-        </button>
-      )}
-
-      {/* Status line: messages and errors appear here instead of pop-up alerts */}
-      <div className="mt-auto space-y-2">
-        {c.notice && (
-          <div
-            role={c.notice.kind === 'error' ? 'alert' : 'status'}
-            className={`rounded-lg px-3 py-2 text-xs ring-1 ring-inset ${
-              c.notice.kind === 'error'
-                ? 'bg-red-50 text-red-700 ring-red-200'
-                : 'bg-emerald-50 text-emerald-800 ring-emerald-200'
-            }`}
-          >
-            {c.notice.text}
-          </div>
-        )}
-        <div className="flex items-center justify-between text-xs text-slate-500 px-1">
-          <span className="inline-flex items-center gap-1">
-            <Users className="w-3.5 h-3.5" />
-            <span className="font-semibold text-slate-700 tabular-nums">{c.waiting}</span> waiting
+          <span className="inline-flex items-center gap-1 text-base">
+            {c.isPaused ? 'Paused' : 'Next'}
+            {!c.isPaused && <ChevronRight className="w-4 h-4" />}
           </span>
-          {coveringText && <span className="text-emerald-700">{coveringText}</span>}
-        </div>
+          <span className="text-[11px] font-medium text-emerald-100">{c.waiting} waiting</span>
+        </button>
+
+        <button onClick={c.complete} disabled={c.isBusy || !serving} className={`btn btn-secondary ${tile} flex-1`}>
+          <CheckCircle className={`w-5 h-5 text-emerald-600 ${icon}`} />
+          <span>Complete</span>
+          <span className="text-[11px] font-semibold text-slate-500 tabular-nums">{serving ?? '—'}</span>
+        </button>
+
+        <button onClick={c.recall} disabled={c.isBusy || !serving} className={`btn btn-secondary ${tile} flex-1`}>
+          <Volume2 className={`w-5 h-5 text-slate-500 ${icon}`} />
+          <span>Recall</span>
+        </button>
+
+        <button onClick={c.skip} disabled={c.isBusy || !serving} className={`btn btn-secondary ${tile} flex-1`}>
+          <SkipForward className={`w-5 h-5 text-slate-500 ${icon}`} />
+          <span>Skip</span>
+        </button>
+
+        {c.inCoverGroup && (
+          <button
+            onClick={c.togglePause}
+            disabled={c.isBusy}
+            className={`btn ${c.isPaused ? 'btn-primary' : 'btn-secondary'} ${tile} flex-1`}
+            title={c.isPaused ? 'Resume taking customers' : 'Pause: waiting customers go to the other counter'}
+          >
+            {c.isPaused ? <PlayIcon className={`w-5 h-5 ${icon}`} /> : <Pause className={`w-5 h-5 text-slate-500 ${icon}`} />}
+            <span>{c.isPaused ? 'Resume' : 'Pause'}</span>
+          </button>
+        )}
+      </div>
+
+      <div
+        role={status?.kind === 'error' ? 'alert' : 'status'}
+        className={`h-5 shrink-0 px-1 text-xs truncate leading-5 ${
+          status?.kind === 'error' ? 'text-red-700' : 'text-emerald-700'
+        }`}
+      >
+        {status?.text ?? ''}
       </div>
     </div>
   );

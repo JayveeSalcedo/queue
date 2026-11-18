@@ -3,7 +3,7 @@ QueueMini: the counter's small always-on-top window.
 
 A regular browser window can never stay above other programs. This tiny app
 shows the same /counter/<n>/mini page inside Windows' built-in WebView2
-(the engine behind Edge) in a window that is pinned on top, so Next / Recall /
+(the engine behind Edge) in a small wide strip that is pinned on top, so Next / Recall /
 Skip / Complete / Pause are always one click away, even over another program.
 
 It is downloaded from the queue server by the "Download Windows shortcuts"
@@ -20,7 +20,6 @@ import sys
 import threading
 import time
 import urllib.request
-import webbrowser
 
 IS_WINDOWS = sys.platform == "win32"
 
@@ -30,8 +29,8 @@ def parse_args():
     p.add_argument("--url", required=True, help="Address of the mini page on the queue server")
     p.add_argument("--counter", type=int, default=0, help="Counter number, used for the window title")
     p.add_argument("--title", default="", help="Window title (default: Counter N)")
-    p.add_argument("--width", type=int, default=360)
-    p.add_argument("--height", type=int, default=560)
+    p.add_argument("--width", type=int, default=540)
+    p.add_argument("--height", type=int, default=150)
     p.add_argument("--no-topmost", action="store_true", help="Do not keep the window above other programs")
     return p.parse_args()
 
@@ -78,18 +77,6 @@ align-items:center;justify-content:center;height:100vh;margin:0;text-align:cente
 <p style="color:#64748b;font-size:13px">Check the network cable or Wi-Fi.<br>Trying again automatically...</p></div>"""
 
 
-class Api:
-    """Functions the page can call (window.pywebview.api.*)."""
-
-    def __init__(self, base_url: str):
-        self._base = base_url
-
-    def open_full(self, path: str = "") -> bool:
-        """Open the full counter page in the normal browser."""
-        webbrowser.open(self._base + path)
-        return True
-
-
 def run_in_edge_app_mode(url: str, width: int, height: int) -> bool:
     """Fallback when WebView2 is unavailable: a plain small Edge/Chrome app window (not pinned on top)."""
     candidates = [
@@ -124,7 +111,6 @@ def keep_title_in_sync(window, base_title: str):
 def main():
     args = parse_args()
     url = args.url
-    base = url.split("/counter/")[0] if "/counter/" in url else url.rsplit("/", 1)[0]
     title = args.title or (f"Counter {args.counter}" if args.counter else "Queue")
 
     if not only_one_per_address(url):
@@ -141,12 +127,11 @@ def main():
         title,
         url=url if reachable else None,
         html=None if reachable else waiting_page(url),
-        js_api=Api(base),
         width=args.width,
         height=args.height,
         x=x,
         y=y,
-        min_size=(300, 420),
+        min_size=(420, 120),
         on_top=not args.no_topmost,
         text_select=True,
     )
