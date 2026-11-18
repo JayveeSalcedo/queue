@@ -15,3 +15,6 @@ windows/dist/
 windows/output/
 downloads/
 *.spec.bak
+
+# Compiled Python in the Windows build folder
+windows/**/__pycache__/

@@ -14,21 +14,38 @@ Designed with a **Green & Yellow** colorway:
 
 ---
 
-## 🚀 Quick Start (Office PC Server)
+## 🚀 Setup (plug and play)
 
-**First-time setup** (needs internet once):
+### 1. Server PC: run `QueueSetup.exe` once
+Double-click **`QueueSetup.exe`**, click *Next*, and approve the administrator prompt. That's all. It needs no Python, no Node and no internet. The installer:
+- installs the server and the web pages,
+- opens the network port (replaces `allow_firewall.bat`),
+- makes the server **start by itself when Windows starts**, even before anyone logs in, and restart itself if it ever stops,
+- puts a **Queue System** icon on the Desktop.
 
-1. Double-click **`install_requirements.bat`**. It checks for Python 3.9.2+ (3.13 recommended) and Node.js 20.19+/22.12+, offers to install them with `winget` if missing, installs the server's Python packages into `backend\venv`, and builds the web pages into `frontend\dist`.
-2. Right-click **`allow_firewall.bat`** → **Run as administrator** so other PCs and phones can connect.
+Your data (database, backups, logs) lives in `C:\ProgramData\QueueSystem` and is **kept** when you upgrade or uninstall. To upgrade, just run a newer `QueueSetup.exe`.
+Start Menu → *Queue System* has **Restart queue server**, **Server log** and **Database backups**.
 
-To start the queue server on Windows:
+> Windows may show a blue "protected your PC" box for an unsigned installer: click **More info → Run anyway**.
 
-1. Double-click **`start_server.bat`** in this directory.
-2. The script will automatically:
-   - Verify Python and frontend builds.
-   - Detect the local LAN IP address (e.g. `http://192.168.1.51:8000`).
-   - Launch the FastAPI server.
-   - Open your browser to the Home portal.
+### 2. Counter PCs: one click from the browser
+On each counter PC open the server address, sign in with the counter account, click **Install** in the top bar → **Download Windows shortcuts**, and open the downloaded file. It puts two icons on the Desktop:
+- **Counter N**: the full counter page in its own window.
+- **Counter N - Mini**: a small window (Next / Recall / Skip / Complete / Pause) that **stays on top of all other programs**. It can also start automatically with Windows.
+
+The mini app is downloaded from the server itself, so there is nothing to carry around on a USB stick.
+
+### 3. Guard phone
+Open the server address in **Chrome** (Android) or **Safari** (iPhone), tap **Install** in the top bar and follow the 3 steps. The icon opens straight to the guard screen.
+
+### Building `QueueSetup.exe`
+Windows programs can't be built on a Mac. Either:
+- **GitHub builds it for you:** *Actions → Windows installer → Run workflow* (or push a tag like `v1.0.0` to also publish a Release). Download `QueueSetup` from the run's artifacts.
+- **Or on a Windows PC** with Python 3.11+, Node.js 20+ and [Inno Setup 6](https://jrsoftware.org/isdl.php): run `windows\build.bat`. The result is `windows\output\QueueSetup.exe`.
+
+### For developers (no installer)
+1. Double-click **`install_requirements.bat`** (needs internet once), then right-click **`allow_firewall.bat`** → *Run as administrator*.
+2. Double-click **`start_server.bat`**. It detects the LAN address, starts the server and opens the Home portal.
 
 ---
 
@@ -69,11 +86,3 @@ Designed for standard 58mm Bluetooth + USB ESC/POS thermal printers:
 - Procedural **Web Audio API** chime (plays a pleasant harmonic chime with zero audio file downloads).
 - Offline **Web Speech API** voice synthesis (*"Now serving ticket R-023, please proceed to Counter 1"*).
 - Re-announced whenever counter staff clicks **RECALL**.
-
----
-
-## ⚙️ Windows Boot Autostart
-
-To make the server start automatically when the Office PC boots:
-1. Press `Win + R`, type `shell:startup`, and press Enter.
-2. Create a shortcut to `start_server.bat` inside that folder.
