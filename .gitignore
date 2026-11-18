@@ -5,3 +5,13 @@ backend/venv/
 # SQLite temporary files written while the server runs
 *.db-shm
 *.db-wal
+
+# Per-installation secret signing key
+backend/secret.key
+
+# Windows installer build output
+windows/build/
+windows/dist/
+windows/output/
+downloads/
+*.spec.bak

@@ -5,7 +5,9 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
 from database import get_db
 
-SECRET_KEY = "offline-queue-system-super-secret-key-lan-only"
+from paths import get_secret_key
+
+SECRET_KEY = get_secret_key()
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days for office LAN sessions
 

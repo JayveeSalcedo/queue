@@ -1,12 +1,13 @@
 import os
 import socket
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from database import init_db
+from paths import WEB_DIR, DOWNLOADS_DIR
 from websocket_manager import ws_manager
 from routes import auth_routes, ticket_routes, counter_routes, admin_routes
 
@@ -102,8 +103,19 @@ async def get_network_info():
         "port": 8000
     }
 
+# Files counter PCs download to set themselves up (the always-on-top mini window app).
+# Only plain file names inside the downloads folder are served, nothing else.
+@app.get("/downloads/{file_name}")
+async def download_station_file(file_name: str):
+    if os.path.basename(file_name) != file_name or not file_name.lower().endswith(".exe"):
+        raise HTTPException(status_code=404, detail="Not found")
+    path = os.path.join(DOWNLOADS_DIR, file_name)
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(path, media_type="application/octet-stream", filename=file_name)
+
 # Serve compiled Frontend SPA if dist folder exists
-FRONTEND_DIST = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "dist")
+FRONTEND_DIST = WEB_DIR
 
 if os.path.exists(FRONTEND_DIST):
     # Mount assets folder
@@ -114,9 +126,11 @@ if os.path.exists(FRONTEND_DIST):
     # SPA Catch-all route to serve index.html for all frontend paths
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
-        # Check if the requested file exists in dist
-        file_path = os.path.join(FRONTEND_DIST, full_path)
-        if full_path and os.path.isfile(file_path):
+        # Serve the file only if it really is inside the web folder. Resolving the
+        # path first stops "..%2f..%2f" tricks from reading other files on the PC.
+        web_root = os.path.realpath(FRONTEND_DIST)
+        file_path = os.path.realpath(os.path.join(web_root, full_path))
+        if full_path and file_path.startswith(web_root + os.sep) and os.path.isfile(file_path):
             return FileResponse(file_path)
         # Default to index.html for client-side routing
         index_file = os.path.join(FRONTEND_DIST, "index.html")

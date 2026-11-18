@@ -4,7 +4,7 @@ import hashlib
 import hmac
 from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "queue.db")
+from paths import DB_PATH
 
 def hash_password(password: str) -> str:
     salt = os.urandom(16).hex()

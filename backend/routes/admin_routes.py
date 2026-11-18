@@ -5,13 +5,12 @@ import shutil
 import aiosqlite
 from typing import Dict
 
-from database import get_db, DB_PATH
+from database import get_db
+from paths import DB_PATH, BACKUPS_DIR
 from auth import require_role
 from websocket_manager import ws_manager
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
-
-BACKUPS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backups")
 
 @router.get("/metrics")
 async def get_metrics(
