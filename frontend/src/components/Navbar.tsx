@@ -1,16 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useQueue } from '../context/QueueContext';
-import { Volume2, VolumeX, LogOut, LogIn } from 'lucide-react';
+import { Volume2, VolumeX, LogOut, LogIn, Download } from 'lucide-react';
+import { InstallDialog } from './InstallDialog';
 
 export const Navbar: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const { isConnected, isAudioEnabled, enableAudio, settings } = useQueue();
   const location = useLocation();
+  const [isInstallOpen, setIsInstallOpen] = useState(false);
 
-  // Hide completely on TV Public Display
-  if (location.pathname === '/display') {
+  // Hide completely on the TV display and in the small counter pop-up window
+  if (location.pathname === '/display' || location.pathname.endsWith('/mini')) {
     return null;
   }
 
@@ -93,6 +95,16 @@ export const Navbar: React.FC = () => {
               )}
             </button>
 
+            {/* Add to home screen / desktop */}
+            <button
+              onClick={() => setIsInstallOpen(true)}
+              title="Add this to your home screen or desktop"
+              className="btn btn-ghost btn-sm"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden md:inline">Install</span>
+            </button>
+
             {!isAuthenticated && location.pathname !== '/login' && (
               <Link
                 to="/login"
@@ -119,6 +131,7 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
       </div>
+      <InstallDialog isOpen={isInstallOpen} onClose={() => setIsInstallOpen(false)} />
     </header>
   );
 };

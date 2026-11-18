@@ -43,10 +43,14 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (data.last_called_ticket && (data.action === 'CALLED' || data.action === 'RECALLED')) {
       setLastCalledTicket(data.last_called_ticket);
-      audioService.announceCall(
-        data.last_called_ticket.queue_number,
-        data.last_called_ticket.counter_name
-      );
+      // The small counter pop-up never speaks, so opening it next to the
+      // full page does not announce every call twice on the same PC
+      if (!window.location.pathname.endsWith('/mini')) {
+        audioService.announceCall(
+          data.last_called_ticket.queue_number,
+          data.last_called_ticket.counter_name
+        );
+      }
     }
   }, []);
 

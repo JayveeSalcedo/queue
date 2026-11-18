@@ -40,7 +40,9 @@ export const LoginPage: React.FC = () => {
           user.role === 'ADMIN' ||
           (user.role === 'GUARD' && redirectTo.startsWith('/guard')) ||
           (user.role === 'COUNTER' &&
-            (user.counter_id ? redirectTo === ownCounterPath : redirectTo.startsWith('/counter')));
+            (user.counter_id
+              ? redirectTo === ownCounterPath || redirectTo === `${ownCounterPath}/mini`
+              : redirectTo.startsWith('/counter')));
         if (allowed) {
           navigate(redirectTo, { replace: true });
           return;

@@ -14,8 +14,10 @@ import {
   Pause,
   Play as PlayIcon,
   LifeBuoy,
-  ChevronRight
+  ChevronRight,
+  PictureInPicture2
 } from 'lucide-react';
+import { openMiniWindow } from '../services/miniWindow';
 
 export const CounterPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -229,6 +231,19 @@ export const CounterPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Small floating window with just the buttons used all day */}
+          <button
+            onClick={() => {
+              if (!openMiniWindow(counterId)) {
+                alert('The pop-up was blocked. Allow pop-ups for this site in the address bar, then try again.');
+              }
+            }}
+            className="btn btn-secondary btn-sm py-2"
+            title="Open a small window with Next, Recall, Skip, Complete and Pause"
+          >
+            <PictureInPicture2 className="w-4 h-4" />
+            Mini window
+          </button>
           <span className="badge bg-white text-slate-700 ring-1 ring-inset ring-slate-200 px-3 py-1.5 text-sm">
             <Users className="w-4 h-4 text-slate-400" />
             <span className="tabular-nums font-semibold">{currentQueueWaiting}</span> waiting

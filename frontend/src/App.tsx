@@ -7,6 +7,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { HomePage } from './pages/HomePage';
 import { GuardPage } from './pages/GuardPage';
 import { CounterPage } from './pages/CounterPage';
+import { CounterMiniPage } from './pages/CounterMiniPage';
 import { DisplayPage } from './pages/DisplayPage';
 import { AdminPage } from './pages/AdminPage';
 import { LoginPage } from './pages/LoginPage';
@@ -16,11 +17,11 @@ import { LoginPage } from './pages/LoginPage';
  * link (e.g. a bookmark left from a different operator) goes to /counter/<own>.
  * Admins can open any counter.
  */
-const OwnCounterOnly: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const OwnCounterOnly: React.FC<{ children: React.ReactNode; suffix?: string }> = ({ children, suffix = '' }) => {
   const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
   if (user?.role === 'COUNTER' && user.counter_id && id !== String(user.counter_id)) {
-    return <Navigate to={`/counter/${user.counter_id}`} replace />;
+    return <Navigate to={`/counter/${user.counter_id}${suffix}`} replace />;
   }
   return <>{children}</>;
 };
@@ -59,6 +60,17 @@ export const App: React.FC = () => {
                     <ProtectedRoute allow={['COUNTER']}>
                       <OwnCounterOnly>
                         <CounterPage />
+                      </OwnCounterOnly>
+                    </ProtectedRoute>
+                  }
+                />
+                {/* Compact controller for the small counter pop-up window */}
+                <Route
+                  path="/counter/:id/mini"
+                  element={
+                    <ProtectedRoute allow={['COUNTER']}>
+                      <OwnCounterOnly suffix="/mini">
+                        <CounterMiniPage />
                       </OwnCounterOnly>
                     </ProtectedRoute>
                   }
