@@ -1,4 +1,4 @@
-"""
+r"""
 Entry point for the installed server (QueueServer.exe, built with PyInstaller).
 
 An installed server has no console window, so everything it would print goes to
