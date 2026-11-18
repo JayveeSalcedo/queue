@@ -29,8 +29,8 @@ export const QUEUE_META: Record<
     solid: 'bg-emerald-700 text-white',
     chip: 'bg-emerald-50 text-emerald-800 ring-1 ring-inset ring-emerald-200',
     dot: 'bg-emerald-600',
-    bar: 'bg-emerald-500',
-    tvText: 'text-white',
+    bar: 'bg-emerald-700',
+    tvText: 'text-emerald-800',
   },
   PRIORITY: {
     label: 'Priority',
@@ -40,7 +40,7 @@ export const QUEUE_META: Record<
     chip: 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200',
     dot: 'bg-amber-500',
     bar: 'bg-amber-400',
-    tvText: 'text-amber-300',
+    tvText: 'text-amber-600',
   },
   COMPLAINT: {
     label: 'Request / Complaint',
@@ -49,8 +49,8 @@ export const QUEUE_META: Record<
     solid: 'bg-sky-700 text-white',
     chip: 'bg-sky-50 text-sky-800 ring-1 ring-inset ring-sky-200',
     dot: 'bg-sky-600',
-    bar: 'bg-sky-400',
-    tvText: 'text-white',
+    bar: 'bg-sky-700',
+    tvText: 'text-sky-800',
   },
 };
 

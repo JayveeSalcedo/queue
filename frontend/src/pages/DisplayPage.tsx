@@ -52,22 +52,22 @@ export const DisplayPage: React.FC = () => {
 
     return (
       <section
-        className={`relative rounded-2xl bg-slate-900 border flex flex-col overflow-hidden transition-colors duration-500 ${
-          flashing ? 'border-amber-400 animate-call-pulse' : 'border-slate-800'
+        className={`relative card rounded-2xl flex flex-col overflow-hidden transition-colors duration-500 ${
+          flashing ? '!border-amber-400 animate-call-pulse' : ''
         }`}
       >
         <div className={`h-1.5 ${meta.bar}`} />
 
         {/* Header */}
-        <div className="px-6 xl:px-8 pt-6 pb-5 border-b border-slate-800 flex items-baseline justify-between gap-4">
+        <div className="px-6 xl:px-8 pt-6 pb-5 border-b border-slate-200 flex items-baseline justify-between gap-4">
           <div>
-            <div className="text-sm xl:text-base font-medium uppercase tracking-widest text-slate-400">
+            <div className="text-sm xl:text-base font-medium uppercase tracking-widest text-slate-500">
               {counter?.name || `Counter ${id}`}
             </div>
-            <h2 className="mt-1 text-2xl xl:text-3xl font-semibold text-white">{meta.label}</h2>
+            <h2 className="mt-1 text-2xl xl:text-3xl font-semibold text-slate-900">{meta.label}</h2>
           </div>
           {queue === 'PRIORITY' && (
-            <span className="hidden xl:block text-sm text-slate-400 text-right">Seniors · PWD · Pregnant</span>
+            <span className="hidden xl:block text-sm text-slate-500 text-right">Seniors · PWD · Pregnant</span>
           )}
         </div>
 
@@ -75,20 +75,20 @@ export const DisplayPage: React.FC = () => {
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 text-center">
           {paused ? (
             <>
-              <div className="text-sm font-medium uppercase tracking-widest text-amber-400">Counter closed</div>
-              <div className="mt-3 text-5xl xl:text-6xl font-semibold text-slate-300">Paused</div>
+              <div className="text-sm font-medium uppercase tracking-widest text-amber-600">Counter closed</div>
+              <div className="mt-3 text-5xl xl:text-6xl font-semibold text-slate-400">Paused</div>
               {partner && (
-                <p className="mt-5 text-xl xl:text-2xl text-white">
+                <p className="mt-5 text-xl xl:text-2xl text-slate-900">
                   Please proceed to <span className="font-semibold">{partner.name}</span>
                 </p>
               )}
             </>
           ) : (
             <>
-              <div className="text-sm font-medium uppercase tracking-widest text-slate-400">Now serving</div>
+              <div className="text-sm font-medium uppercase tracking-widest text-slate-500">Now serving</div>
               <div
                 className={`mt-2 ticket-no leading-none text-[clamp(4.5rem,9vw,10rem)] ${
-                  counter?.current_ticket ? meta.tvText : 'text-slate-700'
+                  counter?.current_ticket ? meta.tvText : 'text-slate-300'
                 }`}
               >
                 {counter?.current_ticket ? counter.current_ticket.queue_number : '—'}
@@ -98,9 +98,9 @@ export const DisplayPage: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 xl:px-8 py-4 border-t border-slate-800 flex items-center justify-between text-lg">
-          <span className="text-slate-400">Waiting</span>
-          <span className="font-semibold tabular-nums text-white">{waitingCounts[queue]}</span>
+        <div className="px-6 xl:px-8 py-4 border-t border-slate-200 bg-slate-50/60 flex items-center justify-between text-lg">
+          <span className="text-slate-500">Waiting</span>
+          <span className="font-semibold tabular-nums text-slate-900">{waitingCounts[queue]}</span>
         </div>
       </section>
     );
@@ -109,11 +109,13 @@ export const DisplayPage: React.FC = () => {
   return (
     <div
       onClick={handleScreenClick}
-      className="min-h-screen bg-slate-950 text-white flex flex-col gap-6 p-6 xl:p-8 select-none overflow-x-hidden cursor-default"
+      className="min-h-screen bg-slate-50 text-slate-900 flex flex-col select-none overflow-x-hidden cursor-default"
     >
+      <div className="h-1.5 bg-gradient-to-r from-emerald-800 via-emerald-700 to-amber-400 shrink-0" />
+      <div className="flex-1 flex flex-col gap-6 p-6 xl:p-8">
       {/* Click-to-unlock audio notice (browser autoplay policies) */}
       {!audioUnlocked && (
-        <div className="rounded-lg bg-amber-400/10 text-amber-300 ring-1 ring-inset ring-amber-400/30 px-4 py-2.5 flex items-center justify-center gap-2 text-sm cursor-pointer">
+        <div className="rounded-lg bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200 px-4 py-2.5 flex items-center justify-center gap-2 text-sm cursor-pointer">
           <Bell className="w-4 h-4" />
           <span>Click anywhere on this screen to enable chime and voice announcements</span>
         </div>
@@ -125,26 +127,26 @@ export const DisplayPage: React.FC = () => {
           <img
             src="/logo.png"
             alt="PANELCO III logo"
-            className="w-16 h-16 xl:w-20 xl:h-20 rounded-full bg-white object-contain p-0.5 shrink-0"
+            className="w-16 h-16 xl:w-20 xl:h-20 rounded-full bg-white object-contain p-0.5 shrink-0 ring-1 ring-slate-200"
           />
           <div>
-            <h1 className="text-2xl lg:text-3xl xl:text-4xl font-semibold tracking-tight text-white">{officeName}</h1>
-            <p className="mt-1 text-base xl:text-lg text-slate-400">{tagline}</p>
+            <h1 className="text-2xl lg:text-3xl xl:text-4xl font-semibold tracking-tight text-slate-900">{officeName}</h1>
+            <p className="mt-1 text-base xl:text-lg text-slate-500">{tagline}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-5">
           <div className="text-center md:text-right">
-            <div className="text-3xl xl:text-4xl font-semibold tabular-nums text-white">{timeStr}</div>
-            <div className="text-sm xl:text-base text-slate-400">{dateStr}</div>
+            <div className="text-3xl xl:text-4xl font-semibold tabular-nums text-slate-900">{timeStr}</div>
+            <div className="text-sm xl:text-base text-slate-500">{dateStr}</div>
           </div>
 
           <button
             onClick={enableAudio}
             className={`p-3 rounded-xl transition-colors ${
               isAudioEnabled
-                ? 'bg-slate-800 text-slate-200 hover:bg-slate-700'
-                : 'bg-red-500/10 text-red-300 ring-1 ring-inset ring-red-500/40'
+                ? 'bg-white text-slate-700 border border-slate-300 shadow-sm hover:bg-slate-50'
+                : 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200'
             }`}
             title={isAudioEnabled ? 'Audio Chime & Speech Enabled' : 'Click to Enable Sound on TV'}
           >
@@ -161,9 +163,9 @@ export const DisplayPage: React.FC = () => {
       </main>
 
       {/* Footer: recently completed */}
-      <footer className="rounded-2xl bg-slate-900 border border-slate-800 px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <footer className="card rounded-2xl px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4 min-w-0">
-          <span className="text-sm font-medium uppercase tracking-widest text-slate-400 shrink-0">Recently served</span>
+          <span className="text-sm font-medium uppercase tracking-widest text-slate-500 shrink-0">Recently served</span>
           <div className="flex items-center gap-2 overflow-hidden">
             {recentlyServed.length === 0 ? (
               <span className="text-sm text-slate-500">None yet</span>
@@ -171,7 +173,7 @@ export const DisplayPage: React.FC = () => {
               recentlyServed.map((item, idx) => (
                 <span
                   key={idx}
-                  className="px-3 py-1 rounded-md bg-slate-800 text-slate-200 ticket-no text-base"
+                  className="px-3 py-1 rounded-md bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200 ticket-no text-base"
                 >
                   {item.queue_number}
                 </span>
@@ -180,10 +182,11 @@ export const DisplayPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="text-sm text-slate-400 shrink-0">
+        <div className="text-sm text-slate-500 shrink-0">
           Please proceed to the counter shown when your number is called.
         </div>
       </footer>
+      </div>
     </div>
   );
 };
