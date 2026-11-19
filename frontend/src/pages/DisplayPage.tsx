@@ -86,7 +86,7 @@ export const DisplayPage: React.FC = () => {
           {paused ? (
             <>
               <div className="text-sm font-medium uppercase tracking-widest text-amber-600">Counter closed</div>
-              <div className="mt-3 text-5xl xl:text-6xl font-semibold text-slate-400">Paused</div>
+              <div className="mt-3 text-5xl xl:text-6xl font-semibold text-slate-400">On Break</div>
               {partner && (
                 <p className="mt-5 text-xl xl:text-2xl text-slate-900">
                   Please proceed to <span className="font-semibold">{partner.name}</span>
