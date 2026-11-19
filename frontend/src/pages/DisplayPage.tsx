@@ -10,7 +10,7 @@ const DEFAULT_HOTLINES =
   'Billing & Inquiries: (000) 000-0000 | Power Interruptions: (000) 000-0000 | Emergency: 000-0000';
 
 export const DisplayPage: React.FC = () => {
-  const { counters, waitingCounts, settings, lastCalledTicket, isAudioEnabled, enableAudio } = useQueue();
+  const { counters, waitingCounts, waitingTickets, settings, lastCalledTicket, isAudioEnabled, enableAudio } = useQueue();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [audioUnlocked, setAudioUnlocked] = useState(false);
 
@@ -58,6 +58,7 @@ export const DisplayPage: React.FC = () => {
     const flashing = isFlashing(id);
     const paused = counter?.status === 'PAUSED';
     const partner = paused ? coverPartnerFor(id) : undefined;
+    const nextUp = waitingTickets.filter((t) => t.queue_type === queue).slice(0, 2);
 
     return (
       <section
@@ -105,6 +106,29 @@ export const DisplayPage: React.FC = () => {
             </>
           )}
         </div>
+
+        {/* Next in line */}
+        {!paused && (
+          <div className="px-6 xl:px-8 pb-6 -mt-2">
+            <div className="text-sm xl:text-base font-medium uppercase tracking-widest text-slate-500 text-center">
+              Next in line
+            </div>
+            {nextUp.length > 0 ? (
+              <ol className="mt-3 space-y-2 max-w-xs mx-auto">
+                {nextUp.map((t, i) => (
+                  <li key={t.id} className="flex items-center gap-4 rounded-xl bg-slate-50 ring-1 ring-inset ring-slate-200 px-4 py-2">
+                    <span className="w-7 h-7 shrink-0 rounded-full bg-white ring-1 ring-inset ring-slate-300 text-sm font-semibold text-slate-500 flex items-center justify-center">
+                      {i + 1}
+                    </span>
+                    <span className="ticket-no text-2xl xl:text-4xl font-semibold text-slate-900">{t.queue_number}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <div className="mt-3 text-center text-lg text-slate-400">No one waiting</div>
+            )}
+          </div>
+        )}
 
         {/* Footer */}
         <div className="px-6 xl:px-8 py-4 border-t border-slate-200 bg-slate-50/60 flex items-center justify-between text-lg">
