@@ -3,10 +3,14 @@ import { useQueue } from '../context/QueueContext';
 import { audioService } from '../services/audio';
 import { QUEUE_META } from '../queueStyles';
 import { Counter, QueueType } from '../types';
-import { Volume2, VolumeX, Bell } from 'lucide-react';
+import { Volume2, VolumeX, Bell, Phone } from 'lucide-react';
+
+// Sample text; the real numbers are set in Admin > Settings > Hotline numbers
+const DEFAULT_HOTLINES =
+  'Billing & Inquiries: (000) 000-0000 | Power Interruptions: (000) 000-0000 | Emergency: 000-0000';
 
 export const DisplayPage: React.FC = () => {
-  const { counters, recentlyServed, waitingCounts, settings, lastCalledTicket, isAudioEnabled, enableAudio } = useQueue();
+  const { counters, waitingCounts, settings, lastCalledTicket, isAudioEnabled, enableAudio } = useQueue();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [audioUnlocked, setAudioUnlocked] = useState(false);
 
@@ -24,6 +28,11 @@ export const DisplayPage: React.FC = () => {
 
   const officeName = settings.office_name || 'PANELCO III SOUTHEAST AREA OFFICE';
   const tagline = settings.office_tagline || 'Public Service Queue Management';
+
+  const hotlines = (settings.hotline_text || DEFAULT_HOTLINES)
+    .split('|')
+    .map((h) => h.trim())
+    .filter(Boolean);
 
   const timeStr = currentTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   const dateStr = currentTime.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -162,28 +171,28 @@ export const DisplayPage: React.FC = () => {
         ))}
       </main>
 
-      {/* Footer: recently completed */}
-      <footer className="card rounded-2xl px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-4 min-w-0">
-          <span className="text-sm font-medium uppercase tracking-widest text-slate-500 shrink-0">Recently served</span>
-          <div className="flex items-center gap-2 overflow-hidden">
-            {recentlyServed.length === 0 ? (
-              <span className="text-sm text-slate-500">None yet</span>
-            ) : (
-              recentlyServed.map((item, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1 rounded-md bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200 ticket-no text-base"
-                >
-                  {item.queue_number}
-                </span>
-              ))
-            )}
-          </div>
+      {/* Footer: hotline numbers marquee */}
+      <footer className="card rounded-2xl flex items-center overflow-hidden">
+        <div className="flex items-center gap-2 self-stretch px-6 py-4 bg-emerald-800 text-white shrink-0">
+          <Phone className="w-5 h-5 xl:w-6 xl:h-6" />
+          <span className="text-sm xl:text-base font-medium uppercase tracking-widest">Hotlines</span>
         </div>
-
-        <div className="text-sm text-slate-500 shrink-0">
-          Please proceed to the counter shown when your number is called.
+        <div className="flex-1 overflow-hidden marquee-mask">
+          <div
+            className="marquee-track py-4 text-xl xl:text-3xl font-semibold text-slate-900"
+            style={{ animationDuration: `${Math.max(20, hotlines.join('').length * 0.35)}s` }}
+          >
+            {[0, 1].map((copy) => (
+              <div key={copy} className="marquee-group" aria-hidden={copy === 1}>
+                {hotlines.map((h, i) => (
+                  <span key={i} className="inline-flex items-center">
+                    {h}
+                    <span className="mx-8 xl:mx-12 text-amber-400">&#9679;</span>
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       </footer>
       </div>

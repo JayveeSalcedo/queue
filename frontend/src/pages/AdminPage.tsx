@@ -371,6 +371,20 @@ export const AdminPage: React.FC = () => {
             </div>
 
             <div>
+              <label htmlFor="hotline_text" className="label">
+                Hotline numbers <span className="font-normal text-slate-400">(scrolls at the bottom of the TV display; separate entries with |)</span>
+              </label>
+              <input
+                id="hotline_text"
+                type="text"
+                value={settings.hotline_text || ''}
+                onChange={(e) => setSettings({ ...settings, hotline_text: e.target.value })}
+                placeholder="Billing: (000) 000-0000 | Emergency: 000-0000"
+                className="input"
+              />
+            </div>
+
+            <div>
               <div className="text-sm font-medium text-slate-900">Ticket prefixes</div>
               <p className="text-xs text-slate-500 mt-0.5 mb-3">The letter printed before each ticket number.</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">

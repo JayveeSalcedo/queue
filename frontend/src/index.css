@@ -161,3 +161,30 @@
 .animate-call-pulse {
   animation: callPulse 1.6s ease-in-out infinite;
 }
+
+/* Hotline marquee on the public display: two identical groups scroll left seamlessly */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  white-space: nowrap;
+  animation: marquee linear infinite;
+}
+
+.marquee-group {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.marquee-mask {
+  mask-image: linear-gradient(to right, transparent, #000 3%, #000 97%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation-duration: 120s !important; }
+}
