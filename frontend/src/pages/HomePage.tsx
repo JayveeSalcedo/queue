@@ -62,7 +62,7 @@ export const HomePage: React.FC = () => {
     },
     {
       title: 'Administration',
-      desc: 'Reports, ticket logs, backups and settings.',
+      desc: 'Reports, ticket logs, the TV display and settings.',
       to: '/admin',
       icon: Settings,
       iconClass: 'bg-slate-100 text-slate-700',

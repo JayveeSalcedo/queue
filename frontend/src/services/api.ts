@@ -25,10 +25,16 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers,
+    });
+  } catch {
+    // fetch only throws when the server cannot be reached at all
+    throw new Error('Cannot reach the queue server. Check the network connection and try again.');
+  }
 
   // A session that expired mid-shift must not strand the station with no way
   // back in: drop the dead token and send the user to the login screen.
@@ -43,13 +49,16 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   }
 
   if (!response.ok) {
-    let errorDetail = 'An error occurred';
+    let errorDetail = 'Something went wrong. Please try again.';
     try {
       const errJson = await response.json();
-      errorDetail = errJson.detail || errorDetail;
+      // The server's own messages are written for people; a list means the form data was invalid
+      if (typeof errJson.detail === 'string' && response.status < 500) errorDetail = errJson.detail;
+      else if (Array.isArray(errJson.detail)) errorDetail = 'Please check the information you entered.';
     } catch {
-      errorDetail = response.statusText;
+      /* keep the generic message */
     }
+    if (response.status >= 500) errorDetail = 'The server had a problem. Please try again in a moment.';
     throw new Error(errorDetail);
   }
 

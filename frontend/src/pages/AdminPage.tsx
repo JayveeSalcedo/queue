@@ -862,7 +862,7 @@ export const AdminPage: React.FC = () => {
           <div className="card-header">
             <div>
               <div className="card-title">Office and system settings</div>
-              <div className="text-xs text-slate-500 mt-0.5">Changes apply right away on every screen and receipt.</div>
+              <div className="text-xs text-slate-500 mt-0.5">Press Save changes to update every screen and printed ticket.</div>
             </div>
           </div>
 
@@ -892,6 +892,39 @@ export const AdminPage: React.FC = () => {
                   onChange={(e) => setSettings({ ...settings, office_tagline: e.target.value })}
                   className="input"
                 />
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium text-slate-900">TV display sound</div>
+              <p className="text-xs text-slate-500 mt-0.5 mb-3">
+                Only the admin can turn the TV's sound on or off. It applies right away, without pressing Save changes.
+              </p>
+              <div className="flex items-start gap-4 rounded-xl border border-slate-200 p-4">
+                <Switch
+                  on={settings.sound_enabled !== 'false'}
+                  label="Sound on the TV display"
+                  onToggle={async () => {
+                    const next = settings.sound_enabled === 'false' ? 'true' : 'false';
+                    setSettings((cur) => ({ ...cur, sound_enabled: next }));
+                    try {
+                      await api.updateSettings({ sound_enabled: next });
+                    } catch (err: any) {
+                      setSettings((cur) => ({ ...cur, sound_enabled: next === 'true' ? 'false' : 'true' }));
+                      alert('Failed to change the TV sound: ' + err.message);
+                    }
+                  }}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-slate-900">
+                    Sound on the TV display: {settings.sound_enabled === 'false' ? 'Off' : 'On'}
+                  </div>
+                  <p className="text-sm text-slate-500 mt-0.5">
+                    {settings.sound_enabled === 'false'
+                      ? 'The TV is silent: no chime, no voice announcement of the number, and the infomercial videos play muted.'
+                      : 'The TV plays a chime and announces each number by voice, and the infomercial videos play with sound.'}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -965,7 +998,7 @@ export const AdminPage: React.FC = () => {
             <div>
               <div className="text-sm font-medium text-slate-900">Load balancing between Priority and Regular</div>
               <p className="text-xs text-slate-500 mt-0.5 mb-3">
-                Choose when Counter 1 (Regular) and Counter 2 (Priority) should mix their lines. Each option works on its own, and both use the same pattern: 1 Priority, then a set number of Regular, then Priority again. Each line stays first come, first served.
+                Decide when Counter 1 (Regular) and Counter 2 (Priority) share their lines. Customers are called in a pattern: 1 Priority, then a set number of Regular, then Priority again. Each line stays first come, first served.
               </p>
 
               <div className="space-y-3">

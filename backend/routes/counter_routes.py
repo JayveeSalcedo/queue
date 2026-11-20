@@ -19,6 +19,9 @@ class CounterStatusBody(BaseModel):
     status: str  # 'ACTIVE' or 'PAUSED'
 
 
+# Plain names for messages shown to staff
+QUEUE_LABELS = {"REGULAR": "Regular", "PRIORITY": "Priority", "COMPLAINT": "Request / Complaint"}
+
 # Queue types whose counters cover for each other when one is paused.
 # Counter 3 (COMPLAINT) is deliberately excluded: complaints stay specialised.
 COVER_GROUP = ("REGULAR", "PRIORITY")
@@ -247,7 +250,7 @@ async def call_specific_ticket(
     if ticket["queue_type"] not in servable:
         raise HTTPException(
             status_code=409,
-            detail=f"{counter['name']} cannot serve {ticket['queue_type']} tickets"
+            detail=f"{counter['name']} can't call {QUEUE_LABELS.get(ticket['queue_type'], 'those')} customers right now."
         )
 
     await db.execute(
@@ -377,7 +380,7 @@ async def recall_skipped_ticket(
     if ticket["queue_type"] not in servable:
         raise HTTPException(
             status_code=409,
-            detail=f"{counter['name']} cannot serve {ticket['queue_type']} tickets"
+            detail=f"{counter['name']} can't call {QUEUE_LABELS.get(ticket['queue_type'], 'those')} customers right now."
         )
 
     # If counter is serving another ticket, complete it
@@ -486,7 +489,7 @@ async def set_counter_status(
     if counter["queue_type"] not in COVER_GROUP:
         raise HTTPException(
             status_code=400,
-            detail=f"{counter['name']} cannot be paused - no other counter covers the {counter['queue_type']} queue"
+            detail=f"{counter['name']} can't be paused because no other counter can take its line."
         )
 
     if new_status == "PAUSED":
@@ -514,7 +517,7 @@ async def set_counter_status(
         if (await cursor.fetchone())["cnt"] == 0:
             raise HTTPException(
                 status_code=409,
-                detail="Cannot pause - no other active counter is left to cover this queue."
+                detail="Can't pause: no other counter is open to take this line."
             )
 
     await db.execute("UPDATE counters SET status = ? WHERE id = ?", (new_status, counter_id))

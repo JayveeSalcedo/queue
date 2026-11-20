@@ -12,8 +12,16 @@ class AudioService {
     }
   }
 
+  // Set by the TV display from the admin's "TV display sound" setting. While it is set it wins over
+  // this browser's own mute button, so the admin alone decides whether the TV makes sound.
+  private remoteEnabled: boolean | null = null;
+
+  public setRemoteEnabled(enabled: boolean | null) {
+    this.remoteEnabled = enabled;
+  }
+
   public isEnabled(): boolean {
-    return this.soundEnabled;
+    return this.remoteEnabled ?? this.soundEnabled;
   }
 
   public setEnabled(enabled: boolean) {
@@ -57,7 +65,7 @@ class AudioService {
    * Fully offline, zero audio file download required.
    */
   public playChime(): Promise<void> {
-    if (!this.soundEnabled) return Promise.resolve();
+    if (!this.isEnabled()) return Promise.resolve();
 
     return new Promise((resolve) => {
       try {
@@ -116,7 +124,7 @@ class AudioService {
    * Formats numbers phonetically (e.g. "R 0 2 3" rather than "R minus twenty-three")
    */
   public speak(text: string): Promise<void> {
-    if (!this.soundEnabled || !('speechSynthesis' in window)) {
+    if (!this.isEnabled() || !('speechSynthesis' in window)) {
       return Promise.resolve();
     }
 
@@ -152,7 +160,7 @@ class AudioService {
    * Complete announcement: chime + speech
    */
   public async announceCall(queueNumber: string, counterName: string) {
-    if (!this.soundEnabled) return;
+    if (!this.isEnabled()) return;
 
     // Convert e.g. "R-023" to "Ticket R, zero two three"
     const parts = queueNumber.split('-');

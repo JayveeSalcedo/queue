@@ -4,12 +4,21 @@ import { audioService } from '../services/audio';
 import { QUEUE_META } from '../queueStyles';
 import { Counter, QueueType } from '../types';
 import { DisplayMediaPlayer } from '../components/DisplayMediaPlayer';
-import { Volume2, VolumeX, Bell, Phone } from 'lucide-react';
+import { Bell, Phone } from 'lucide-react';
 
 export const DisplayPage: React.FC = () => {
-  const { counters, waitingCounts, waitingTickets, coverOrder, settings, media, announcements, lastCalledTicket, isAudioEnabled, enableAudio } = useQueue();
+  const { counters, waitingCounts, waitingTickets, coverOrder, settings, media, announcements, lastCalledTicket } = useQueue();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+
+  // The admin decides whether the TV makes any sound (Admin > Settings > TV display sound).
+  // There is no mute button on the TV itself.
+  const adminSoundOn = settings.sound_enabled !== 'false';
+  useEffect(() => {
+    audioService.setRemoteEnabled(adminSoundOn);
+    if (!adminSoundOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+    return () => audioService.setRemoteEnabled(null);
+  }, [adminSoundOn]);
   const [ducked, setDucked] = useState(false);
   const liveAnnouncements = announcements.filter((a) => a.active);
   const hasMedia = media.length > 0 || liveAnnouncements.length > 0;
@@ -272,24 +281,12 @@ export const DisplayPage: React.FC = () => {
             <div className="text-xs xl:text-sm text-slate-500">{dateStr}</div>
           </div>
 
-          {!audioUnlocked && (
+          {adminSoundOn && !audioUnlocked && (
             <span className="hidden md:flex items-center gap-1.5 rounded-full bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200 px-3 py-1 text-xs xl:text-sm">
               <Bell className="w-3.5 h-3.5" />
               Click the screen once to turn on sound
             </span>
           )}
-
-          <button
-            onClick={enableAudio}
-            className={`p-2 rounded-lg transition-colors ${
-              isAudioEnabled
-                ? 'bg-white text-slate-400 border border-slate-200 hover:bg-slate-50'
-                : 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200'
-            }`}
-            title={isAudioEnabled ? 'Audio Chime & Speech Enabled' : 'Click to Enable Sound on TV'}
-          >
-            {isAudioEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-          </button>
         </div>
       </header>
 
@@ -300,7 +297,7 @@ export const DisplayPage: React.FC = () => {
             videos={media}
             announcements={liveAnnouncements}
             announcementSeconds={parseInt(settings.announcement_seconds || '15', 10) || 15}
-            soundOn={audioUnlocked && isAudioEnabled}
+            soundOn={audioUnlocked && adminSoundOn}
             ducked={ducked}
           />
           <div className="flex flex-col gap-4 xl:gap-5 min-h-0">

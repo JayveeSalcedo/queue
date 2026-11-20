@@ -165,13 +165,14 @@ export const CounterPage: React.FC = () => {
   };
 
   const handleMarkNoShow = async (ticketId: number) => {
-    if (!confirm('Mark ticket as No Show (Cancel)?')) return;
+    const number = skippedTickets.find((t) => t.id === ticketId)?.queue_number || 'this customer';
+    if (!confirm(`Mark ${number} as a no-show? They will be taken off the list and will not be called again.`)) return;
     setIsProcessing(true);
     try {
       await api.markNoShow(counterId, ticketId);
       await refreshState();
     } catch (err: any) {
-      alert('Error marking no show: ' + err.message);
+      alert('Could not mark the no-show: ' + err.message);
     } finally {
       setIsProcessing(false);
     }
@@ -301,26 +302,29 @@ export const CounterPage: React.FC = () => {
         </div>
       )}
 
-      {/* Covering banner - this counter is absorbing a paused counter's queue */}
-      {coveringFor.length > 0 && (
-        <div className="mb-6 rounded-xl bg-emerald-50 ring-1 ring-inset ring-emerald-200 p-4 flex items-start gap-3">
-          <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-            <LifeBuoy className="w-4 h-4" />
+      {/* Covering / sharing banner - this counter serves both Regular and Priority */}
+      {(coveringFor.length > 0 || (sharingBothLines && inCoverGroup && !isPaused)) && (() => {
+        const ratio = settings.priority_balance_ratio || '3';
+        const patternOn = settings.priority_balance_enabled === 'true' || sharingBothLines;
+        const sharing = coveringFor.length === 0;
+        return (
+          <div className="mb-6 rounded-xl bg-emerald-50 ring-1 ring-inset ring-emerald-200 p-4 flex items-start gap-3">
+            <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+              <LifeBuoy className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-emerald-900">
+                {sharing ? 'Sharing the Regular and Priority lines' : `Covering for ${coveringFor.map((c) => c.name).join(' & ')}`}
+              </h2>
+              <p className="text-sm text-emerald-800">
+                {patternOn
+                  ? `Next customer follows a pattern: 1 Priority, then ${ratio} Regular, then Priority again.`
+                  : `Next customer also calls ${coveringFor.map((c) => QUEUE_META[c.queue_type].label.toLowerCase()).join(' & ')} tickets. Priority customers are called first.`}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-sm font-semibold text-emerald-900">
-              Covering for {coveringFor.map((c) => c.name).join(' & ')}
-            </h2>
-            <p className="text-sm text-emerald-800">
-              Next customer also calls {coveringFor.map((c) => QUEUE_META[c.queue_type].label.toLowerCase()).join(' & ')}{' '}
-              tickets
-              {servableQueueTypes.includes('PRIORITY') && servableQueueTypes.length > 1
-                ? ' — priority customers are called first.'
-                : '.'}
-            </p>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* LEFT: Serving station */}
