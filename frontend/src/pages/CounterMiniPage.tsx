@@ -28,7 +28,7 @@ export const CounterMiniPage: React.FC = () => {
 
   const tile = 'h-full flex-col gap-0.5 rounded-xl px-1 leading-tight';
   // In a very short window drop the icons and keep the labels readable
-  const icon = '[@media(max-height:104px)]:hidden';
+  const icon = '[@media(max-height:118px)]:hidden';
 
   return (
     <div className="h-screen bg-slate-50 flex flex-col gap-1 p-2 select-none overflow-hidden">
