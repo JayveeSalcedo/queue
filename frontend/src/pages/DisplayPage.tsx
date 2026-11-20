@@ -91,7 +91,7 @@ export const DisplayPage: React.FC = () => {
     // A counter covering for its paused partner (or sharing both lines while both are open) serves
     // both queues, so its "next in line" and waiting count follow the combined call order
     const sharingBothLines =
-      settings.priority_balance_enabled === 'true' && settings.priority_balance_always === 'true';
+      settings.priority_balance_always === 'true';
     const covering = !paused && (id === 1 || id === 2) && (sharingBothLines || !!coverPartnerOfPaused(id));
     const byId = new Map(waitingTickets.map((t) => [t.id, t]));
     const nextUp = covering

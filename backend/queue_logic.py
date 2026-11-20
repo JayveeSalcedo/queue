@@ -23,21 +23,26 @@ MAX_RATIO = 10
 
 async def get_balance_config(db) -> Tuple[bool, int, bool]:
     """
-    (enabled, regulars called between two priority tickets, share_always) from the settings
-    table. share_always means Counter 1 and Counter 2 share both lines even while both are
-    open; it only applies when load balancing itself is on.
+    (use_pattern, regulars called between two priority tickets, share_always) from the settings.
+
+    Two independent admin options feed this:
+      * priority_balance_enabled: when one counter covers a paused partner, use the
+        Priority / N Regular / Priority pattern instead of "all Priority first".
+      * priority_balance_always: Counter 1 and Counter 2 share both lines even while both are
+        open, using the same pattern.
+    The pattern is used if either option is on.
     """
     cursor = await db.execute(
         "SELECT key, value FROM settings WHERE key IN (?, ?, ?)", (SETTING_ENABLED, SETTING_RATIO, SETTING_ALWAYS)
     )
     values = {r["key"]: r["value"] for r in await cursor.fetchall()}
-    enabled = str(values.get(SETTING_ENABLED, "false")).lower() == "true"
-    share_always = enabled and str(values.get(SETTING_ALWAYS, "false")).lower() == "true"
+    when_paused = str(values.get(SETTING_ENABLED, "false")).lower() == "true"
+    share_always = str(values.get(SETTING_ALWAYS, "false")).lower() == "true"
     try:
         ratio = int(values.get(SETTING_RATIO, DEFAULT_RATIO))
     except (TypeError, ValueError):
         ratio = DEFAULT_RATIO
-    return enabled, max(1, min(MAX_RATIO, ratio)), share_always
+    return (when_paused or share_always), max(1, min(MAX_RATIO, ratio)), share_always
 
 
 async def regulars_since_priority(db, today: str) -> Optional[int]:

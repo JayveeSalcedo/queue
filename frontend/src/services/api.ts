@@ -245,16 +245,6 @@ export const api = {
     return request(`/admin/announcements/${id}`, { method: 'DELETE' });
   },
 
-  async backupDatabase(): Promise<{ message: string; filename: string; size_kb: number }> {
-    return request('/admin/backup-db', {
-      method: 'POST',
-    });
-  },
-
-  async listBackups(): Promise<Array<{ filename: string; size_kb: number; modified_at: string }>> {
-    return request('/admin/backups');
-  },
-
   // Network info
   async getNetworkInfo(): Promise<{ hostname: string; primary_ip: string; ip_addresses: string[]; port: number }> {
     return request('/network-info');

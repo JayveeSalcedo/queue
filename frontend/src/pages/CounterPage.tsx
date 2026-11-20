@@ -55,9 +55,9 @@ export const CounterPage: React.FC = () => {
       )
     : [];
 
-  // Load balancing "share while both are open": Counter 1 and 2 both draw from both lines
+  // "Balance when both counters are open": Counter 1 and 2 both draw from both lines
   const sharingBothLines =
-    settings.priority_balance_enabled === 'true' && settings.priority_balance_always === 'true';
+    settings.priority_balance_always === 'true';
   const servableQueueTypes: QueueType[] =
     inCoverGroup && !isPaused && sharingBothLines
       ? [activeCounter.queue_type, ...COVER_GROUP.filter((q) => q !== activeCounter.queue_type)]

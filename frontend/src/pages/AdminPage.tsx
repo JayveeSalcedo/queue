@@ -8,13 +8,11 @@ import { api } from '../services/api';
 import { 
   BarChart3, 
   Download, 
-  Database, 
   Settings, 
   Clock, 
   Users, 
   CheckCircle, 
   FileSpreadsheet, 
-  HardDrive,
   RefreshCw,
   Save,
   Film,
@@ -27,20 +25,62 @@ import {
   Pencil
 } from 'lucide-react';
 
+type HotlineRow = { label: string; number: string };
+
+/** Stored text ("Billing: (000) 000-0000 | Emergency: 000-0000") -> one row per hotline */
+const parseHotlines = (text?: string): HotlineRow[] =>
+  (text || '')
+    .split('|')
+    .map((h) => h.trim())
+    .filter(Boolean)
+    .map((h) => {
+      const i = h.lastIndexOf(':');
+      return i < 0 ? { label: '', number: h } : { label: h.slice(0, i).trim(), number: h.slice(i + 1).trim() };
+    });
+
+/** Rows -> the text the TV scrolls. Blank rows are dropped. */
+const joinHotlines = (rows: HotlineRow[]): string =>
+  rows
+    .map((r) => {
+      const label = r.label.trim();
+      const number = r.number.trim();
+      return label && number ? `${label}: ${number}` : label || number;
+    })
+    .filter(Boolean)
+    .join(' | ');
+
+const Switch: React.FC<{ on: boolean; label: string; onToggle: () => void }> = ({ on, label, onToggle }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={on}
+    aria-label={label}
+    onClick={onToggle}
+    className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors ${
+      on ? 'bg-emerald-700' : 'bg-slate-300'
+    }`}
+  >
+    <span
+      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+        on ? 'translate-x-5' : ''
+      }`}
+    />
+  </button>
+);
+
 export const AdminPage: React.FC = () => {
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [backups, setBackups] = useState<Array<{ filename: string; size_kb: number; modified_at: string }>>([]);
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const [isBackingUp, setIsBackingUp] = useState(false);
-  const [activeTab, setActiveTab] = useState<'metrics' | 'history' | 'backups' | 'media' | 'announcements' | 'settings'>('metrics');
+  const [activeTab, setActiveTab] = useState<'metrics' | 'history' | 'media' | 'announcements' | 'settings'>('metrics');
   const { media, announcements, settings: liveSettings } = useQueue();
   const [editing, setEditing] = useState<{ id?: number; title: string; subtitle: string; body: string; active: boolean } | null>(null);
   const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
   const [announcementSeconds, setAnnouncementSeconds] = useState<string | null>(null);
+  const [hotlineRows, setHotlineRows] = useState<HotlineRow[]>([]);
   const [previewKey, setPreviewKey] = useState<string | null>(null);
   // Local copy of the playlist (videos + announcements) so rows follow the mouse while dragging
   const [playlist, setPlaylist] = useState<PlaylistEntry[]>(() => buildPlaylist(media, announcements));
@@ -79,16 +119,15 @@ export const AdminPage: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [m, s, tList, bList] = await Promise.all([
+      const [m, s, tList] = await Promise.all([
         api.getMetrics(),
         api.getSettings(),
         api.getTicketHistory(selectedDate),
-        api.listBackups(),
       ]);
       setMetrics(m);
       setSettings(s);
+      setHotlineRows(parseHotlines(s.hotline_text));
       setTickets(tList);
-      setBackups(bList);
     } catch (err: any) {
       console.error('Failed to load admin data:', err);
     } finally {
@@ -110,20 +149,6 @@ export const AdminPage: React.FC = () => {
       alert('Failed to update settings: ' + err.message);
     } finally {
       setIsSavingSettings(false);
-    }
-  };
-
-  const handleCreateBackup = async () => {
-    setIsBackingUp(true);
-    try {
-      const res = await api.backupDatabase();
-      alert(`Backup created successfully: ${res.filename} (${res.size_kb} KB)`);
-      const updatedBackups = await api.listBackups();
-      setBackups(updatedBackups);
-    } catch (err: any) {
-      alert('Backup failed: ' + err.message);
-    } finally {
-      setIsBackingUp(false);
     }
   };
 
@@ -248,7 +273,6 @@ export const AdminPage: React.FC = () => {
   const tabs = [
     { id: 'metrics', label: 'Overview', icon: BarChart3 },
     { id: 'history', label: 'Ticket log', icon: FileSpreadsheet },
-    { id: 'backups', label: 'Backups', icon: Database },
     { id: 'media', label: 'Display playlist', icon: Film },
     { id: 'announcements', label: 'Announcements', icon: Megaphone },
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -260,7 +284,7 @@ export const AdminPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
         <div>
           <h1 className="page-title">Administration</h1>
-          <p className="page-subtitle">Today's performance, ticket records, backups and system settings.</p>
+          <p className="page-subtitle">Today's performance, ticket records, the TV display and system settings.</p>
         </div>
         <button onClick={loadData} disabled={isLoading} className="btn btn-secondary btn-sm py-2 self-start sm:self-auto">
           <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -441,43 +465,6 @@ export const AdminPage: React.FC = () => {
                 )}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 3: BACKUPS */}
-      {activeTab === 'backups' && (
-        <div className="card">
-          <div className="card-header">
-            <div>
-              <div className="card-title">Database backups</div>
-              <div className="text-xs text-slate-500 mt-0.5">Saved on the server in the backend/backups folder.</div>
-            </div>
-            <button onClick={handleCreateBackup} disabled={isBackingUp} className="btn btn-primary btn-sm py-2">
-              <HardDrive className="w-4 h-4" />
-              {isBackingUp ? 'Creating…' : 'Create backup'}
-            </button>
-          </div>
-
-          <div className="divide-y divide-slate-100">
-            {backups.length === 0 ? (
-              <p className="text-sm text-slate-500 py-12 text-center">No backups yet.</p>
-            ) : (
-              backups.map((b) => (
-                <div key={b.filename} className="px-5 py-3 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
-                      <Database className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-slate-900 truncate">{b.filename}</div>
-                      <div className="text-xs text-slate-500">{b.modified_at}</div>
-                    </div>
-                  </div>
-                  <div className="text-sm text-slate-500 tabular-nums shrink-0">{b.size_kb} KB</div>
-                </div>
-              ))
-            )}
           </div>
         </div>
       )}
@@ -909,101 +896,135 @@ export const AdminPage: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="hotline_text" className="label">
-                Hotline numbers <span className="font-normal text-slate-400">(scrolls at the bottom of the TV display; separate entries with |)</span>
-              </label>
-              <input
-                id="hotline_text"
-                type="text"
-                value={settings.hotline_text || ''}
-                onChange={(e) => setSettings({ ...settings, hotline_text: e.target.value })}
-                placeholder="Billing: (000) 000-0000 | Emergency: 000-0000"
-                className="input"
-              />
+              <div className="text-sm font-medium text-slate-900">Hotline numbers</div>
+              <p className="text-xs text-slate-500 mt-0.5 mb-3">
+                One hotline per row. They scroll along the bottom of the TV display in this order.
+              </p>
+
+              {hotlineRows.length > 0 && (
+                <div className="hidden sm:grid grid-cols-[1fr_1fr_auto] gap-3 mb-1.5 text-xs font-medium text-slate-500">
+                  <div>Label</div>
+                  <div>Number</div>
+                  <div className="w-10" />
+                </div>
+              )}
+              <div className="space-y-2">
+                {hotlineRows.map((row, i) => {
+                  const update = (patch: Partial<HotlineRow>) => {
+                    const next = hotlineRows.map((r, j) => (j === i ? { ...r, ...patch } : r));
+                    setHotlineRows(next);
+                    setSettings({ ...settings, hotline_text: joinHotlines(next) });
+                  };
+                  return (
+                    <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3">
+                      <input
+                        type="text"
+                        value={row.label}
+                        onChange={(e) => update({ label: e.target.value.replace(/\|/g, '') })}
+                        placeholder="Billing & Inquiries"
+                        aria-label={`Hotline ${i + 1} label`}
+                        className="input"
+                      />
+                      <input
+                        type="text"
+                        value={row.number}
+                        onChange={(e) => update({ number: e.target.value.replace(/\|/g, '') })}
+                        placeholder="(000) 000-0000"
+                        aria-label={`Hotline ${i + 1} number`}
+                        className="input"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = hotlineRows.filter((_, j) => j !== i);
+                          setHotlineRows(next);
+                          setSettings({ ...settings, hotline_text: joinHotlines(next) });
+                        }}
+                        className="btn btn-secondary btn-sm p-2 text-red-700 self-center"
+                        title="Remove this hotline"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              {hotlineRows.length === 0 && (
+                <p className="text-sm text-slate-500 mb-2">No hotlines yet. The TV shows a welcome notice until you add one.</p>
+              )}
+              <button
+                type="button"
+                onClick={() => setHotlineRows([...hotlineRows, { label: '', number: '' }])}
+                className="btn btn-secondary btn-sm mt-3"
+              >
+                <Phone className="w-4 h-4" />
+                Add hotline
+              </button>
             </div>
 
             <div>
-              <div className="text-sm font-medium text-slate-900">Load balancing</div>
+              <div className="text-sm font-medium text-slate-900">Load balancing between Priority and Regular</div>
               <p className="text-xs text-slate-500 mt-0.5 mb-3">
-                Controls the order when one counter serves both the Priority and the Regular line: when the other counter is paused, or all the time if you turn on the second option.
+                Choose when Counter 1 (Regular) and Counter 2 (Priority) should mix their lines. Each option works on its own, and both use the same pattern: 1 Priority, then a set number of Regular, then Priority again. Each line stays first come, first served.
               </p>
-              <div className="flex items-start gap-4 rounded-xl border border-slate-200 p-4">
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={settings.priority_balance_enabled === 'true'}
-                  aria-label="Balance Priority and Regular lines"
-                  onClick={() =>
-                    setSettings({
-                      ...settings,
-                      priority_balance_enabled: settings.priority_balance_enabled === 'true' ? 'false' : 'true',
-                    })
-                  }
-                  className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors ${
-                    settings.priority_balance_enabled === 'true' ? 'bg-emerald-700' : 'bg-slate-300'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                      settings.priority_balance_enabled === 'true' ? 'translate-x-5' : ''
-                    }`}
+
+              <div className="space-y-3">
+                <div className="flex items-start gap-4 rounded-xl border border-slate-200 p-4">
+                  <Switch
+                    on={settings.priority_balance_enabled === 'true'}
+                    label="Balance when one counter is paused"
+                    onToggle={() =>
+                      setSettings({
+                        ...settings,
+                        priority_balance_enabled: settings.priority_balance_enabled === 'true' ? 'false' : 'true',
+                      })
+                    }
                   />
-                </button>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-slate-900">Alternate Priority and Regular customers</div>
-                  <p className="text-sm text-slate-500 mt-0.5">
-                    {settings.priority_balance_enabled === 'true'
-                      ? `The covering counter calls 1 Priority, then ${settings.priority_balance_ratio || '3'} Regular, then Priority again. Each line stays first come, first served, and if one line is empty the other is called in order.`
-                      : 'Off: the covering counter calls every waiting Priority customer before any Regular customer.'}
-                  </p>
-                  {settings.priority_balance_enabled === 'true' && (
-                    <div className="mt-4 flex items-start gap-3">
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={settings.priority_balance_always === 'true'}
-                        aria-label="Also balance when both counters are open"
-                        onClick={() =>
-                          setSettings({
-                            ...settings,
-                            priority_balance_always: settings.priority_balance_always === 'true' ? 'false' : 'true',
-                          })
-                        }
-                        className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors ${
-                          settings.priority_balance_always === 'true' ? 'bg-emerald-700' : 'bg-slate-300'
-                        }`}
-                      >
-                        <span
-                          className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                            settings.priority_balance_always === 'true' ? 'translate-x-5' : ''
-                          }`}
-                        />
-                      </button>
-                      <div>
-                        <div className="text-sm font-medium text-slate-900">Also balance when both counters are open</div>
-                        <p className="text-sm text-slate-500 mt-0.5">
-                          {settings.priority_balance_always === 'true'
-                            ? 'Counter 1 and Counter 2 share both lines all the time. Whichever counter calls next takes the next customer in the same Priority / Regular pattern, so the load is spread evenly.'
-                            : 'Off: while both counters are open, Counter 1 only calls Regular and Counter 2 only calls Priority. Sharing starts only when one counter is paused.'}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  {settings.priority_balance_enabled === 'true' && (
-                    <div className="mt-3 flex items-center gap-2 text-sm text-slate-700">
-                      <label htmlFor="priority_balance_ratio">Regular customers per Priority:</label>
-                      <input
-                        id="priority_balance_ratio"
-                        type="number"
-                        min={1}
-                        max={10}
-                        value={settings.priority_balance_ratio || '3'}
-                        onChange={(e) => setSettings({ ...settings, priority_balance_ratio: e.target.value })}
-                        className="input w-20 py-1.5"
-                      />
-                    </div>
-                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-slate-900">Balance when one counter is paused</div>
+                    <p className="text-sm text-slate-500 mt-0.5">
+                      {settings.priority_balance_enabled === 'true'
+                        ? 'The counter that takes over both lines calls Priority and Regular customers in the pattern.'
+                        : 'Off: the counter that takes over both lines calls every waiting Priority customer before any Regular customer.'}
+                    </p>
+                  </div>
                 </div>
+
+                <div className="flex items-start gap-4 rounded-xl border border-slate-200 p-4">
+                  <Switch
+                    on={settings.priority_balance_always === 'true'}
+                    label="Balance when both counters are open"
+                    onToggle={() =>
+                      setSettings({
+                        ...settings,
+                        priority_balance_always: settings.priority_balance_always === 'true' ? 'false' : 'true',
+                      })
+                    }
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-slate-900">Balance when both counters are open</div>
+                    <p className="text-sm text-slate-500 mt-0.5">
+                      {settings.priority_balance_always === 'true'
+                        ? 'Counter 1 and Counter 2 share both lines all the time. Whichever counter calls next takes the next customer in the pattern, so the load is spread evenly.'
+                        : 'Off: while both counters are open, Counter 1 only calls Regular and Counter 2 only calls Priority.'}
+                    </p>
+                  </div>
+                </div>
+
+                {(settings.priority_balance_enabled === 'true' || settings.priority_balance_always === 'true') && (
+                  <div className="flex items-center gap-2 text-sm text-slate-700 px-1">
+                    <label htmlFor="priority_balance_ratio">Regular customers per Priority:</label>
+                    <input
+                      id="priority_balance_ratio"
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={settings.priority_balance_ratio || '3'}
+                      onChange={(e) => setSettings({ ...settings, priority_balance_ratio: e.target.value })}
+                      className="input w-20 py-1.5"
+                    />
+                  </div>
+                )}
               </div>
             </div>
 

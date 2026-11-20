@@ -40,9 +40,9 @@ export function useCounterControl(counterId: number) {
   const covering = inCoverGroup && !isPaused
     ? counters.filter((c) => c.id !== counterId && c.status === 'PAUSED' && COVER_GROUP.includes(c.queue_type))
     : [];
-  // With load balancing set to "share while both are open", Counter 1 and 2 draw from both lines
+  // With the "balance when both counters are open" option, Counter 1 and 2 draw from both lines
   const sharingBothLines =
-    settings.priority_balance_enabled === 'true' && settings.priority_balance_always === 'true';
+    settings.priority_balance_always === 'true';
   const servable: QueueType[] =
     inCoverGroup && !isPaused && sharingBothLines
       ? [counter.queue_type, ...COVER_GROUP.filter((q) => q !== counter.queue_type)]
