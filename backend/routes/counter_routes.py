@@ -5,7 +5,7 @@ from pydantic import BaseModel
 import aiosqlite
 
 from database import get_db, begin_write, close_stale_tickets
-from models import TransferRequest
+from models import TransferRequest, TransferManyRequest
 from websocket_manager import ws_manager
 from queue_logic import COVER_GROUP, get_balance_config, regulars_since_priority, plan_call_order, note_call
 from auth import get_current_user
@@ -418,13 +418,22 @@ async def mark_no_show(
     user: dict = Depends(get_current_user)
 ):
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    # Only tickets in the skipped / holding list can be written off as no-shows
+    await begin_write(db)
+    # A customer on the on-hold list, or the one currently at this counter who did not show up
     cursor = await db.execute(
-        "UPDATE tickets SET status = 'CANCELLED', completed_at = ?, notes = COALESCE(notes || ' ', '') || '[No Show]' WHERE id = ? AND status = 'SKIPPED'",
-        (now_str, req.ticket_id)
+        """
+        UPDATE tickets SET status = 'CANCELLED', completed_at = ?, notes = COALESCE(notes || ' ', '') || '[No Show]'
+        WHERE id = ? AND (
+            status = 'SKIPPED'
+            OR (status IN ('CALLED', 'SERVING') AND id = (SELECT current_ticket_id FROM counters WHERE id = ?))
+        )
+        """,
+        (now_str, req.ticket_id, counter_id)
     )
     if cursor.rowcount == 0:
-        raise HTTPException(status_code=409, detail="Only skipped tickets can be marked as No Show")
+        raise HTTPException(status_code=409, detail="Only a customer at this counter or on hold can be marked as a no-show.")
+    # Free the counter if it was the customer being served
+    await db.execute("UPDATE counters SET current_ticket_id = NULL WHERE id = ? AND current_ticket_id = ?", (counter_id, req.ticket_id))
     await db.commit()
     await ws_manager.broadcast_state("NO_SHOW", None)
     return {"message": "Ticket marked as No Show"}
@@ -461,6 +470,70 @@ async def transfer_ticket(
 
     await ws_manager.broadcast_state("TRANSFERRED", None)
     return {"message": f"Ticket transferred to {target_q} queue"}
+
+
+@router.post("/{counter_id}/transfer-many")
+async def transfer_many_tickets(
+    counter_id: int,
+    req: TransferManyRequest,
+    db: aiosqlite.Connection = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    """
+    Move several customers to another line in one step: the one being served and/or customers
+    waiting in a line this counter can call from. Customers who can no longer be moved (already
+    called by someone else, finished) are skipped and counted, so one stale entry never blocks the rest.
+    """
+    target_q = req.target_queue_type.upper()
+    if target_q not in QUEUE_LABELS:
+        raise HTTPException(status_code=400, detail="Invalid target queue type")
+    ticket_ids = list(dict.fromkeys(req.ticket_ids))  # drop duplicates, keep order
+    if not ticket_ids:
+        raise HTTPException(status_code=400, detail="Choose at least one customer to transfer.")
+    if len(ticket_ids) > 100:
+        raise HTTPException(status_code=400, detail="Transfer up to 100 customers at a time.")
+
+    await begin_write(db)
+    cursor = await db.execute(
+        "SELECT id, name, queue_type, status, current_ticket_id FROM counters WHERE id = ?", (counter_id,)
+    )
+    counter = await cursor.fetchone()
+    if not counter:
+        raise HTTPException(status_code=404, detail="Counter not found")
+    servable = await get_servable_queue_types(db, counter)
+
+    note_suffix = f" [Transferred from Counter {counter_id}{': ' + req.notes if req.notes else ''}]"
+    moved, skipped = 0, 0
+    for ticket_id in ticket_ids:
+        # The customer at this counter, or a customer waiting in a line this counter serves
+        cursor = await db.execute(
+            """
+            UPDATE tickets
+            SET status = 'WAITING', queue_type = ?, counter_id = NULL, notes = COALESCE(notes || ' ', '') || ?
+            WHERE id = ? AND queue_type != ? AND (
+                (status IN ('CALLED', 'SERVING') AND id = ?)
+                OR (status = 'WAITING' AND queue_type IN ({placeholders}))
+            )
+            """.format(placeholders=",".join("?" for _ in servable)),
+            (target_q, note_suffix, ticket_id, target_q, counter["current_ticket_id"] or -1, *servable)
+        )
+        if cursor.rowcount == 0:
+            skipped += 1
+            continue
+        moved += 1
+        await db.execute(
+            "UPDATE counters SET current_ticket_id = NULL WHERE id = ? AND current_ticket_id = ?", (counter_id, ticket_id)
+        )
+    await db.commit()
+
+    if moved:
+        await ws_manager.broadcast_state("TRANSFERRED", None)
+    return {
+        "moved": moved,
+        "skipped": skipped,
+        "message": f"{moved} customer{'s' if moved != 1 else ''} sent to {QUEUE_LABELS[target_q]}."
+        + (f" {skipped} could not be moved." if skipped else ""),
+    }
 
 
 @router.post("/{counter_id}/status")

@@ -1,14 +1,17 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { CheckCircle, ChevronRight, Pause, Play as PlayIcon, SkipForward, Volume2 } from 'lucide-react';
+import { ArrowRightLeft, CheckCircle, ChevronRight, MoreHorizontal, Pause, Play as PlayIcon, SkipForward, UserX, Volume2 } from 'lucide-react';
 import { useQueue } from '../context/QueueContext';
 import { useCounterControl } from '../hooks/useCounterControl';
+import { QUEUE_META } from '../queueStyles';
+import { QueueType } from '../types';
 
 /**
  * Compact counter controller: a small wide strip with only the buttons used
  * all day. The customer being served is shown in the window title (and so on
  * the taskbar) and on the Complete button; the waiting count is on Next.
- * Anything rarer (transfer, waiting list, on-hold) lives on the full page.
+ * Rarer actions (transfer several customers to another line, no-show) are in the ⋯ menu.
+ * The waiting list and on-hold list live on the full page.
  */
 export const CounterMiniPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +19,46 @@ export const CounterMiniPage: React.FC = () => {
   const { isConnected } = useQueue();
   const c = useCounterControl(counterId);
   const serving = c.currentTicket?.queue_number ?? null;
+
+  // 'main' = the buttons, 'transfer' = pick customers and a line. The ⋯ menu floats over the buttons.
+  const [view, setView] = useState<'main' | 'transfer'>('main');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+
+  const openTransfer = () => {
+    setMenuOpen(false);
+    // Most often it is the customer at the counter who came to the wrong place
+    setSelected(new Set(c.currentTicket ? [c.currentTicket.id] : []));
+    setView('transfer');
+  };
+  const toggle = (tid: number) =>
+    setSelected((cur) => {
+      const next = new Set(cur);
+      if (next.has(tid)) next.delete(tid);
+      else next.add(tid);
+      return next;
+    });
+  const sendTo = async (target: QueueType) => {
+    await c.transferMany([...selected], target);
+    setView('main');
+  };
+  const noShow = () => {
+    setMenuOpen(false);
+    if (!serving) return;
+    if (!window.confirm(`Mark ${serving} as a no-show? They will not be called again.`)) return;
+    c.noShowCurrent();
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMenuOpen(false);
+        setView('main');
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   useEffect(() => {
     document.title = serving ? `${serving} · ${c.counter.name}` : `${c.counter.name} · idle`;
@@ -31,7 +74,72 @@ export const CounterMiniPage: React.FC = () => {
   const icon = '[@media(max-height:118px)]:hidden';
 
   return (
-    <div className="h-screen bg-slate-50 flex flex-col gap-1 p-2 select-none overflow-hidden">
+    <div className="h-screen bg-slate-50 flex flex-col gap-1 p-2 select-none overflow-hidden relative">
+      {view === 'transfer' ? (
+        <div className="flex-1 min-h-0 flex flex-col gap-1.5">
+          <div className="flex items-center justify-between gap-2 text-sm">
+            <span className="font-semibold text-slate-900">
+              Transfer customers <span className="font-normal text-slate-500">({selected.size} selected)</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <button
+                onClick={() => setSelected(new Set(c.transferable.map((t) => t.id)))}
+                className="text-xs text-emerald-700 font-medium px-1.5 py-0.5 rounded hover:bg-emerald-50"
+              >
+                All
+              </button>
+              <button
+                onClick={() => setSelected(new Set())}
+                className="text-xs text-slate-600 font-medium px-1.5 py-0.5 rounded hover:bg-slate-100"
+              >
+                None
+              </button>
+              <button onClick={() => setView('main')} className="text-xs font-medium px-2 py-0.5 rounded bg-slate-200 text-slate-800 hover:bg-slate-300">
+                Cancel
+              </button>
+            </span>
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-y-auto flex flex-wrap content-start gap-1">
+            {c.transferable.length === 0 ? (
+              <span className="text-sm text-slate-500 py-1">No customers to transfer.</span>
+            ) : (
+              c.transferable.map((t) => {
+                const on = selected.has(t.id);
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => toggle(t.id)}
+                    aria-pressed={on}
+                    title={t.serving ? 'At the counter now' : 'Waiting'}
+                    className={`px-2 py-0.5 rounded-md text-xs font-semibold tabular-nums ring-1 ring-inset ${
+                      on ? 'bg-emerald-700 text-white ring-emerald-700' : QUEUE_META[t.queue_type].chip
+                    }`}
+                  >
+                    {on ? '✓ ' : ''}
+                    {t.queue_number}
+                    {t.serving ? ' · now' : ''}
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-slate-600 shrink-0">Send to</span>
+            {(['REGULAR', 'PRIORITY', 'COMPLAINT'] as QueueType[]).map((q) => (
+              <button
+                key={q}
+                onClick={() => sendTo(q)}
+                disabled={c.isBusy || selected.size === 0}
+                className={`btn btn-secondary flex-1 py-1.5 text-xs ${QUEUE_META[q].chip}`}
+              >
+                {QUEUE_META[q].label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
       <div className="flex-1 min-h-0 flex gap-2">
         <button
           onClick={c.callNext}
@@ -72,7 +180,45 @@ export const CounterMiniPage: React.FC = () => {
             <span>{c.isPaused ? 'Resume' : 'Pause'}</span>
           </button>
         )}
+
+        <button
+          onClick={() => setMenuOpen((o) => !o)}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          title="More: transfer customers, no-show"
+          className={`btn btn-secondary ${tile} flex-[0.7]`}
+        >
+          <MoreHorizontal className={`w-5 h-5 text-slate-500 ${icon}`} />
+          <span>More</span>
+        </button>
       </div>
+      )}
+
+      {menuOpen && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+          <div role="menu" className="absolute z-20 right-2 bottom-8 w-60 rounded-xl bg-white shadow-lg ring-1 ring-slate-200 p-1">
+            <button
+              role="menuitem"
+              onClick={openTransfer}
+              disabled={c.transferable.length === 0}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left text-slate-800 hover:bg-slate-100 disabled:opacity-40"
+            >
+              <ArrowRightLeft className="w-4 h-4 text-slate-500" />
+              Transfer customers…
+            </button>
+            <button
+              role="menuitem"
+              onClick={noShow}
+              disabled={!serving}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left text-slate-800 hover:bg-slate-100 disabled:opacity-40"
+            >
+              <UserX className="w-4 h-4 text-slate-500" />
+              {serving ? `No-show: ${serving}` : 'No-show'}
+            </button>
+          </div>
+        </>
+      )}
 
       <div
         role={status?.kind === 'error' ? 'alert' : 'status'}

@@ -17,7 +17,7 @@ export interface Notice {
  * to show inline rather than a blocking alert, which suits a tiny window.
  */
 export function useCounterControl(counterId: number) {
-  const { counters, waitingCounts, settings, refreshState } = useQueue();
+  const { counters, waitingCounts, waitingTickets, coverOrder, settings, refreshState } = useQueue();
   const [isBusy, setIsBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -49,6 +49,21 @@ export function useCounterControl(counterId: number) {
       : [counter.queue_type, ...covering.map((c) => c.queue_type)];
   const waiting = servable.reduce((total, q) => total + (waitingCounts[q] || 0), 0);
 
+  // Customers this counter could send to another line: the one at the counter, then the waiting ones
+  // in the order they will be called
+  const rank = new Map(coverOrder.map((tid, i) => [tid, i]));
+  const waitingHere = waitingTickets
+    .filter((t) => servable.includes(t.queue_type))
+    .sort((a, b) =>
+      servable.length > 1 && rank.has(a.id) && rank.has(b.id) ? rank.get(a.id)! - rank.get(b.id)! : a.number_seq - b.number_seq
+    );
+  const transferable: Array<{ id: number; queue_number: string; queue_type: QueueType; serving: boolean }> = [
+    ...(currentTicket
+      ? [{ id: currentTicket.id, queue_number: currentTicket.queue_number, queue_type: currentTicket.queue_type, serving: true }]
+      : []),
+    ...waitingHere.map((t) => ({ id: t.id, queue_number: t.queue_number, queue_type: t.queue_type, serving: false })),
+  ];
+
   const show = useCallback((n: Notice | null) => {
     if (noticeTimer.current) clearTimeout(noticeTimer.current);
     setNotice(n);
@@ -65,8 +80,9 @@ export function useCounterControl(counterId: number) {
       if (isBusy) return;
       setIsBusy(true);
       try {
-        await action();
-        show(success ? { kind: 'info', text: success } : null);
+        const result = await action();
+        // An action may return its own message (for example how many customers were moved)
+        show(typeof result === 'string' ? { kind: 'info', text: result } : success ? { kind: 'info', text: success } : null);
       } catch (err: any) {
         show({ kind: 'error', text: err?.message || 'Something went wrong.' });
       } finally {
@@ -84,6 +100,7 @@ export function useCounterControl(counterId: number) {
     inCoverGroup,
     covering,
     waiting,
+    transferable,
     isBusy,
     notice,
     callNext: () =>
@@ -94,6 +111,14 @@ export function useCounterControl(counterId: number) {
     complete: () => run(() => api.complete(counterId)),
     recall: () => run(() => api.recall(counterId), 'Announced again.'),
     skip: () => run(() => api.skip(counterId), 'Moved to the on-hold list.'),
+    transferMany: (ticketIds: number[], target: QueueType) =>
+      run(async () => (await api.transferMany(counterId, ticketIds, target)).message),
+    noShowCurrent: () =>
+      run(async () => {
+        if (!currentTicket) throw new Error('There is no customer at the counter.');
+        await api.markNoShow(counterId, currentTicket.id);
+        return `${currentTicket.queue_number} marked as a no-show.`;
+      }),
     togglePause: () => run(() => api.setCounterStatus(counterId, isPaused ? 'ACTIVE' : 'PAUSED')),
   };
 }

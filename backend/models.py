@@ -51,6 +51,11 @@ class TransferRequest(BaseModel):
     target_counter_id: Optional[int] = None
     notes: Optional[str] = None
 
+class TransferManyRequest(BaseModel):
+    ticket_ids: List[int]
+    target_queue_type: str
+    notes: Optional[str] = None
+
 class ResetDailyRequest(BaseModel):
     confirmed: bool = True
 

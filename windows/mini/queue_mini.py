@@ -29,7 +29,7 @@ def parse_args():
     p.add_argument("--url", required=True, help="Address of the mini page on the queue server")
     p.add_argument("--counter", type=int, default=0, help="Counter number, used for the window title")
     p.add_argument("--title", default="", help="Window title (default: Counter N)")
-    p.add_argument("--width", type=int, default=540)
+    p.add_argument("--width", type=int, default=600)
     p.add_argument("--height", type=int, default=150)
     p.add_argument("--no-topmost", action="store_true", help="Do not keep the window above other programs")
     return p.parse_args()

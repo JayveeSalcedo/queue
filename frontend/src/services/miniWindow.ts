@@ -1,5 +1,5 @@
 // A small wide strip: buttons only
-const MINI_WIDTH = 540;
+const MINI_WIDTH = 600;
 const MINI_HEIGHT = 150;
 
 export const miniWindowPath = (counterId: number) => `/counter/${counterId}/mini`;

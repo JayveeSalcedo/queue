@@ -166,6 +166,14 @@ export const api = {
     });
   },
 
+  // Send several customers (the one being served and/or waiting ones) to another line at once
+  async transferMany(counterId: number, ticketIds: number[], targetQueueType: QueueType): Promise<{ moved: number; skipped: number; message: string }> {
+    return request(`/counters/${counterId}/transfer-many`, {
+      method: 'POST',
+      body: JSON.stringify({ ticket_ids: ticketIds, target_queue_type: targetQueueType }),
+    });
+  },
+
   async markNoShow(counterId: number, ticketId: number): Promise<{ message: string }> {
     return request(`/counters/${counterId}/mark-no-show`, {
       method: 'POST',
