@@ -57,6 +57,23 @@ export interface WaitingTicket {
   notes?: string | null;
 }
 
+export interface MediaItem {
+  id: number;
+  original_name: string;
+  size_bytes: number;
+  url: string;
+  sort_order: number;
+}
+
+export interface Announcement {
+  id: number;
+  title: string;
+  subtitle: string;
+  body: string;
+  active: boolean;
+  sort_order: number;
+}
+
 export interface WaitingCounts {
   REGULAR: number;
   PRIORITY: number;
@@ -71,6 +88,9 @@ export interface QueueStateSnapshot {
   counters: Counter[];
   waiting_counts: WaitingCounts;
   waiting_tickets?: WaitingTicket[];
+  media?: MediaItem[];
+  announcements?: Announcement[];
+  cover_order?: number[];
   skipped_tickets: SkippedTicket[];
   recently_served: RecentlyServedTicket[];
   last_called_ticket?: {

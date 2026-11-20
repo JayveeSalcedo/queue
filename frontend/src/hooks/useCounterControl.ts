@@ -17,7 +17,7 @@ export interface Notice {
  * to show inline rather than a blocking alert, which suits a tiny window.
  */
 export function useCounterControl(counterId: number) {
-  const { counters, waitingCounts, refreshState } = useQueue();
+  const { counters, waitingCounts, settings, refreshState } = useQueue();
   const [isBusy, setIsBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -40,7 +40,13 @@ export function useCounterControl(counterId: number) {
   const covering = inCoverGroup && !isPaused
     ? counters.filter((c) => c.id !== counterId && c.status === 'PAUSED' && COVER_GROUP.includes(c.queue_type))
     : [];
-  const servable: QueueType[] = [counter.queue_type, ...covering.map((c) => c.queue_type)];
+  // With load balancing set to "share while both are open", Counter 1 and 2 draw from both lines
+  const sharingBothLines =
+    settings.priority_balance_enabled === 'true' && settings.priority_balance_always === 'true';
+  const servable: QueueType[] =
+    inCoverGroup && !isPaused && sharingBothLines
+      ? [counter.queue_type, ...COVER_GROUP.filter((q) => q !== counter.queue_type)]
+      : [counter.queue_type, ...covering.map((c) => c.queue_type)];
   const waiting = servable.reduce((total, q) => total + (waitingCounts[q] || 0), 0);
 
   const show = useCallback((n: Notice | null) => {

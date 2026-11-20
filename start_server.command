@@ -54,6 +54,7 @@ echo "  Admin Dashboard     : http://$IP:8000/admin"
 echo "  Local PC Access     : http://localhost:8000"
 echo
 echo "======================================================================"
+echo " Auto-reload is ON: backend code changes restart the server by themselves."
 echo " Press Ctrl+C to stop the server at any time."
 echo "======================================================================"
 echo
@@ -61,5 +62,7 @@ echo
 # Open browser on local machine once the server has had a moment to start
 (sleep 2 && open http://localhost:8000 2>/dev/null || xdg-open http://localhost:8000 2>/dev/null) &
 
-# Start Uvicorn Server on 0.0.0.0:8000
-exec backend/venv/bin/python -m uvicorn main:app --app-dir backend --host 0.0.0.0 --port 8000
+# Start Uvicorn Server on 0.0.0.0:8000.
+# --reload restarts the server by itself whenever a backend .py file changes, so new
+# endpoints take effect without stopping it by hand (frontend changes need no restart).
+exec backend/venv/bin/python -m uvicorn main:app --app-dir backend --host 0.0.0.0 --port 8000 --reload --reload-dir backend

@@ -6,14 +6,13 @@ import { QUEUE_META } from '../queueStyles';
 import { ShieldCheck, Settings, Network, ArrowRight, Tv, Headset } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
-  const { settings, waitingCounts } = useQueue();
+  const { waitingCounts } = useQueue();
   const [networkInfo, setNetworkInfo] = useState<{ primary_ip: string; ip_addresses: string[]; port: number } | null>(null);
 
   useEffect(() => {
     api.getNetworkInfo().then(setNetworkInfo).catch(() => {});
   }, []);
 
-  const officeName = settings.office_name || 'PANELCO III SOUTHEAST AREA OFFICE';
   // The server PC may have one address per connection (LAN cable and Wi-Fi)
   const serverIps = networkInfo?.ip_addresses?.length
     ? networkInfo.ip_addresses
@@ -75,16 +74,9 @@ export const HomePage: React.FC = () => {
     <div className="page space-y-8">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <img
-            src="/logo.png"
-            alt="PANELCO III logo"
-            className="w-14 h-14 rounded-full object-contain bg-white ring-1 ring-slate-200 shrink-0"
-          />
-          <div>
-            <h1 className="page-title">{officeName}</h1>
-            <p className="page-subtitle">Queue Management System — select a station to open.</p>
-          </div>
+        <div>
+          <h1 className="page-title">Overview</h1>
+          <p className="page-subtitle">Select a station to open, or use the network address to connect another device.</p>
         </div>
 
         {/* Network address for connecting other devices */}

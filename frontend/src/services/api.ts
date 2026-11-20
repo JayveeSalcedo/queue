@@ -1,4 +1,4 @@
-import { QueueType, Ticket, Counter, QueueStateSnapshot, User, AdminMetrics } from '../types';
+import { Announcement, MediaItem, QueueType, Ticket, Counter, QueueStateSnapshot, User, AdminMetrics } from '../types';
 
 const API_BASE = '/api';
 
@@ -189,6 +189,60 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(settings),
     });
+  },
+
+  // Infomercial videos for the TV display
+  async listMedia(): Promise<MediaItem[]> {
+    return request('/media');
+  },
+
+  // Uses XMLHttpRequest rather than fetch so large videos can report upload progress
+  uploadMedia(file: File, onProgress?: (percent: number) => void): Promise<MediaItem> {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${API_BASE}/admin/media`);
+      const token = getAuthToken();
+      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => {
+        let body: any = {};
+        try {
+          body = JSON.parse(xhr.responseText);
+        } catch {
+          /* non-JSON error body */
+        }
+        if (xhr.status >= 200 && xhr.status < 300) resolve(body);
+        else reject(new Error(body.detail || `Upload failed (${xhr.status})`));
+      };
+      xhr.onerror = () => reject(new Error('Upload failed. Check the connection to the server.'));
+      const form = new FormData();
+      form.append('file', file);
+      xhr.send(form);
+    });
+  },
+
+  async deleteMedia(id: number): Promise<{ message: string }> {
+    return request(`/admin/media/${id}`, { method: 'DELETE' });
+  },
+
+  // One order for everything on the display: videos and announcements together
+  async reorderPlaylist(items: Array<{ type: 'video' | 'announcement'; id: number }>): Promise<{ message: string }> {
+    return request('/admin/playlist/order', { method: 'PUT', body: JSON.stringify({ items }) });
+  },
+
+  // Announcements shown on the TV display
+  async createAnnouncement(data: Omit<Announcement, 'id' | 'sort_order'>): Promise<Announcement> {
+    return request('/admin/announcements', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  async updateAnnouncement(id: number, data: Omit<Announcement, 'id' | 'sort_order'>): Promise<Announcement> {
+    return request(`/admin/announcements/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  },
+
+  async deleteAnnouncement(id: number): Promise<{ message: string }> {
+    return request(`/admin/announcements/${id}`, { method: 'DELETE' });
   },
 
   async backupDatabase(): Promise<{ message: string; filename: string; size_kb: number }> {

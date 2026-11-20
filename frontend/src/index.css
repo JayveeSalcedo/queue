@@ -182,7 +182,7 @@
 }
 
 .marquee-mask {
-  mask-image: linear-gradient(to right, transparent, #000 3%, #000 97%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 1.5%, #000 98.5%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {

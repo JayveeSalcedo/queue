@@ -7,6 +7,7 @@ import aiosqlite
 from database import get_db, begin_write, close_stale_tickets
 from models import TransferRequest
 from websocket_manager import ws_manager
+from queue_logic import COVER_GROUP, get_balance_config, regulars_since_priority, plan_call_order, note_call
 from auth import get_current_user
 
 router = APIRouter(prefix="/api/counters", tags=["Counters"])
@@ -26,11 +27,17 @@ COVER_GROUP = ("REGULAR", "PRIORITY")
 async def get_servable_queue_types(db, counter) -> list:
     """
     Queue types this counter may call from right now: always its own, plus the
-    queue of any paused counter inside the cover group (R <-> P).
+    queue of any paused counter inside the cover group (R <-> P), or the whole
+    cover group when the admin turned on sharing while both counters are open.
     """
     own = counter["queue_type"]
     if own not in COVER_GROUP:
         return [own]
+
+    # Load balancing with "share while both are open": both counters draw from both lines
+    _enabled, _ratio, share_always = await get_balance_config(db)
+    if share_always:
+        return [own] + [q for q in COVER_GROUP if q != own]
 
     cursor = await db.execute(
         """
@@ -56,6 +63,26 @@ def next_waiting_ticket_sql(queue_types: list) -> str:
         ORDER BY CASE queue_type WHEN 'PRIORITY' THEN 0 ELSE 1 END, number_seq ASC
         LIMIT 1
     """
+
+async def pick_next_covering_ticket(db, today: str):
+    """Next ticket for a counter that serves both Regular and Priority."""
+    cursor = await db.execute(
+        """
+        SELECT id, queue_number, queue_type, created_at FROM tickets
+        WHERE status = 'WAITING' AND session_date = ? AND queue_type IN ('REGULAR', 'PRIORITY')
+        ORDER BY number_seq ASC
+        """,
+        (today,)
+    )
+    rows = await cursor.fetchall()
+    enabled, ratio, _share = await get_balance_config(db)
+    since = await regulars_since_priority(db, today) if enabled else None
+    order = plan_call_order(
+        [r for r in rows if r["queue_type"] == "PRIORITY"],
+        [r for r in rows if r["queue_type"] == "REGULAR"],
+        enabled, ratio, since, limit=1,
+    )
+    return order[0] if order else None
 
 @router.get("")
 async def list_counters(db: aiosqlite.Connection = Depends(get_db)):
@@ -131,8 +158,13 @@ async def call_next_ticket(
     # 3. Find next waiting ticket across this counter's own queue plus any
     #    queue it is currently covering for a paused counter
     servable = await get_servable_queue_types(db, counter)
-    cursor = await db.execute(next_waiting_ticket_sql(servable), (today, *servable))
-    next_ticket = await cursor.fetchone()
+    if set(servable) == set(COVER_GROUP):
+        # Covering both queues: Priority first, or Priority / N Regular / Priority when the
+        # admin turned load balancing on
+        next_ticket = await pick_next_covering_ticket(db, today)
+    else:
+        cursor = await db.execute(next_waiting_ticket_sql(servable), (today, *servable))
+        next_ticket = await cursor.fetchone()
     if not next_ticket:
         # Clear counter current ticket if none waiting
         await db.execute("UPDATE counters SET current_ticket_id = NULL WHERE id = ?", (counter_id,))
@@ -149,6 +181,8 @@ async def call_next_ticket(
         """,
         (now_str, now_str, counter_id, user["username"], next_ticket["id"])
     )
+
+    await note_call(db, next_ticket["queue_type"], today)
 
     # 5. Assign to counter
     await db.execute("UPDATE counters SET current_ticket_id = ? WHERE id = ?", (next_ticket["id"], counter_id))
@@ -224,6 +258,7 @@ async def call_specific_ticket(
         """,
         (now_str, now_str, counter_id, user["username"], req.ticket_id)
     )
+    await note_call(db, ticket["queue_type"], now_str[:10])
     await db.execute("UPDATE counters SET current_ticket_id = ? WHERE id = ?", (req.ticket_id, counter_id))
     await db.commit()
 
@@ -356,6 +391,7 @@ async def recall_skipped_ticket(
         "UPDATE tickets SET status = 'CALLED', counter_id = ?, called_at = ?, called_by_user = ? WHERE id = ?",
         (counter_id, now_str, user["username"], req.ticket_id)
     )
+    await note_call(db, ticket["queue_type"], now_str[:10])
     await db.execute("UPDATE counters SET current_ticket_id = ? WHERE id = ?", (req.ticket_id, counter_id))
     await db.commit()
 

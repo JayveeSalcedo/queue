@@ -21,3 +21,9 @@ windows/**/__pycache__/
 
 # Live database: created on first run, never committed
 backend/queue.db
+
+# Infomercial videos uploaded by the admin: user data, never committed
+backend/media/
+
+# Compiled Python
+*.pyc

@@ -29,6 +29,13 @@ async def get_db():
     finally:
         await db.close()
 
+async def next_playlist_position(db) -> int:
+    """Next position at the end of the display playlist (videos and announcements share one order)."""
+    cursor = await db.execute(
+        "SELECT MAX(COALESCE((SELECT MAX(sort_order) FROM media), 0), COALESCE((SELECT MAX(sort_order) FROM announcements), 0)) + 1"
+    )
+    return (await cursor.fetchone())[0]
+
 async def begin_write(db):
     """
     Take SQLite's write lock before reading the rows a request is about to change,
@@ -130,6 +137,38 @@ async def init_db():
         )
         """)
 
+        # 6. Infomercial videos shown on the public display, played in sort_order
+        await db.execute("""
+        CREATE TABLE IF NOT EXISTS media (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            filename TEXT UNIQUE NOT NULL,
+            original_name TEXT NOT NULL,
+            size_bytes INTEGER NOT NULL DEFAULT 0,
+            sort_order INTEGER NOT NULL DEFAULT 0
+        )
+        """)
+
+        # 7. Load-balancing memory: Regular tickets called since the last Priority one
+        await db.execute("""
+        CREATE TABLE IF NOT EXISTS balance_state (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            state_date TEXT NOT NULL,
+            regulars_since INTEGER NOT NULL DEFAULT 0
+        )
+        """)
+
+        # 8. Announcements shown on the public display, in rotation with the videos
+        await db.execute("""
+        CREATE TABLE IF NOT EXISTS announcements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            subtitle TEXT NOT NULL DEFAULT '',
+            body TEXT NOT NULL DEFAULT '',
+            active INTEGER NOT NULL DEFAULT 1,
+            sort_order INTEGER NOT NULL DEFAULT 0
+        )
+        """)
+
         # Seed default counters if not existing
         cursor = await db.execute("SELECT COUNT(*) FROM counters")
         row = await cursor.fetchone()
@@ -176,6 +215,10 @@ async def init_db():
             ("sound_enabled", "true"),
             ("tts_voice_pitch", "1.0"),
             ("tts_voice_rate", "0.9"),
+            ("priority_balance_enabled", "false"),
+            ("priority_balance_ratio", "3"),
+            ("priority_balance_always", "false"),
+            ("announcement_seconds", "15"),
         ]
         for key, val in default_settings:
             await db.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (key, val))

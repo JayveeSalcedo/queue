@@ -23,7 +23,7 @@ export const CounterPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const counterId = id ? parseInt(id) : 1;
 
-  const { counters, waitingCounts, waitingTickets, skippedTickets, refreshState } = useQueue();
+  const { counters, waitingCounts, waitingTickets, skippedTickets, coverOrder, settings, refreshState } = useQueue();
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [transferTicketId, setTransferTicketId] = useState<number | null>(null);
@@ -55,10 +55,13 @@ export const CounterPage: React.FC = () => {
       )
     : [];
 
-  const servableQueueTypes: QueueType[] = [
-    activeCounter.queue_type,
-    ...coveringFor.map((c) => c.queue_type),
-  ];
+  // Load balancing "share while both are open": Counter 1 and 2 both draw from both lines
+  const sharingBothLines =
+    settings.priority_balance_enabled === 'true' && settings.priority_balance_always === 'true';
+  const servableQueueTypes: QueueType[] =
+    inCoverGroup && !isPaused && sharingBothLines
+      ? [activeCounter.queue_type, ...COVER_GROUP.filter((q) => q !== activeCounter.queue_type)]
+      : [activeCounter.queue_type, ...coveringFor.map((c) => c.queue_type)];
 
   // Where this counter's customers go while it is paused
   const coveredBy = isPaused
@@ -197,10 +200,16 @@ export const CounterPage: React.FC = () => {
     0
   );
 
-  // Priority first when covering both, mirroring the server's call order
+  // Covering both queues: the server decides the order (Priority first, or Priority / N Regular /
+  // Priority when load balancing is on), so mirror it. Otherwise it is plain first come, first served.
+  const coverRank = new Map(coverOrder.map((id, i) => [id, i]));
+  const covering = servableQueueTypes.length > 1;
   const myQueueWaitingTickets = (waitingTickets || [])
     .filter((t) => servableQueueTypes.includes(t.queue_type))
     .sort((a, b) => {
+      if (covering && coverRank.has(a.id) && coverRank.has(b.id)) {
+        return coverRank.get(a.id)! - coverRank.get(b.id)!;
+      }
       if (a.queue_type !== b.queue_type) {
         if (a.queue_type === 'PRIORITY') return -1;
         if (b.queue_type === 'PRIORITY') return 1;

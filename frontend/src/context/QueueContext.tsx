@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { Counter, WaitingCounts, WaitingTicket, SkippedTicket, RecentlyServedTicket, QueueStateSnapshot } from '../types';
+import { Announcement, Counter, MediaItem, WaitingCounts, WaitingTicket, SkippedTicket, RecentlyServedTicket, QueueStateSnapshot } from '../types';
 import { api } from '../services/api';
 import { audioService } from '../services/audio';
 
@@ -10,6 +10,9 @@ interface QueueContextType {
   skippedTickets: SkippedTicket[];
   recentlyServed: RecentlyServedTicket[];
   settings: Record<string, string>;
+  media: MediaItem[];
+  announcements: Announcement[];
+  coverOrder: number[];
   isConnected: boolean;
   lastCalledTicket: any | null;
   refreshState: () => Promise<void>;
@@ -26,6 +29,10 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [skippedTickets, setSkippedTickets] = useState<SkippedTicket[]>([]);
   const [recentlyServed, setRecentlyServed] = useState<RecentlyServedTicket[]>([]);
   const [settings, setSettings] = useState<Record<string, string>>({});
+  const [media, setMedia] = useState<MediaItem[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  // Ticket ids in the order a covering counter will call them (empty when no counter is paused)
+  const [coverOrder, setCoverOrder] = useState<number[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [lastCalledTicket, setLastCalledTicket] = useState<any | null>(null);
   const [isAudioEnabled, setIsAudioEnabled] = useState(audioService.isEnabled());
@@ -40,6 +47,9 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (data.skipped_tickets) setSkippedTickets(data.skipped_tickets);
     if (data.recently_served) setRecentlyServed(data.recently_served);
     if (data.settings) setSettings(data.settings);
+    if (data.media) setMedia(data.media);
+    if (data.announcements) setAnnouncements(data.announcements);
+    if (data.cover_order) setCoverOrder(data.cover_order);
 
     if (data.last_called_ticket && (data.action === 'CALLED' || data.action === 'RECALLED')) {
       setLastCalledTicket(data.last_called_ticket);
@@ -142,6 +152,9 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         skippedTickets,
         recentlyServed,
         settings,
+        media,
+        announcements,
+        coverOrder,
         isConnected,
         lastCalledTicket,
         refreshState,

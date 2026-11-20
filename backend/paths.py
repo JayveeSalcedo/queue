@@ -38,6 +38,7 @@ DOWNLOADS_DIR = os.environ.get("QUEUE_DOWNLOADS_DIR") or _default_downloads
 DB_PATH = os.path.join(DATA_DIR, "queue.db")
 BACKUPS_DIR = os.path.join(DATA_DIR, "backups")
 LOG_DIR = os.path.join(DATA_DIR, "logs")
+MEDIA_DIR = os.path.join(DATA_DIR, "media")  # infomercial videos for the TV display
 
 
 def get_secret_key() -> str:

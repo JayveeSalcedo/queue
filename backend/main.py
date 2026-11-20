@@ -1,3 +1,4 @@
+import mimetypes
 import os
 import socket
 from contextlib import asynccontextmanager
@@ -7,9 +8,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from database import init_db
-from paths import WEB_DIR, DOWNLOADS_DIR
+from paths import WEB_DIR, DOWNLOADS_DIR, MEDIA_DIR
 from websocket_manager import ws_manager
-from routes import auth_routes, ticket_routes, counter_routes, admin_routes
+from routes import auth_routes, ticket_routes, counter_routes, admin_routes, media_routes, announcement_routes
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -39,6 +40,8 @@ app.include_router(auth_routes.router)
 app.include_router(ticket_routes.router)
 app.include_router(counter_routes.router)
 app.include_router(admin_routes.router)
+app.include_router(media_routes.router)
+app.include_router(announcement_routes.router)
 
 # WebSocket Endpoint
 @app.websocket("/ws")
@@ -113,6 +116,17 @@ async def download_station_file(file_name: str):
     if not os.path.isfile(path):
         raise HTTPException(status_code=404, detail="Not found")
     return FileResponse(path, media_type="application/octet-stream", filename=file_name)
+
+# Infomercial videos for the TV display. Only plain file names inside the media folder
+# are served. FileResponse handles Range requests, which Safari needs to play video.
+@app.get("/media/{file_name}")
+async def serve_media(file_name: str):
+    if os.path.basename(file_name) != file_name:
+        raise HTTPException(status_code=404, detail="Not found")
+    path = os.path.join(MEDIA_DIR, file_name)
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(path, media_type=mimetypes.guess_type(file_name)[0] or "application/octet-stream")
 
 # Serve compiled Frontend SPA if dist folder exists
 FRONTEND_DIST = WEB_DIR

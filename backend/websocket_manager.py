@@ -4,6 +4,7 @@ from fastapi import WebSocket
 from typing import List, Optional, Dict, Any
 import aiosqlite
 from database import DB_PATH
+from queue_logic import COVER_GROUP, get_balance_config, regulars_since_priority, plan_call_order
 
 class ConnectionManager:
     def __init__(self):
@@ -156,6 +157,51 @@ class ConnectionManager:
             setting_rows = await cursor.fetchall()
             settings = {r["key"]: r["value"] for r in setting_rows}
 
+            # 5b. Call order of the combined Regular + Priority queue while one of those counters is
+            # paused (the other one covers both), or always when the admin shares both lines.
+            # Empty otherwise.
+            cover_order = []
+            enabled, ratio, share_always = await get_balance_config(db)
+            if share_always or any(c["status"] == "PAUSED" and c["queue_type"] in COVER_GROUP for c in counters):
+                since = await regulars_since_priority(db, today) if enabled else None
+                ordered = plan_call_order(
+                    [t for t in waiting_tickets if t["queue_type"] == "PRIORITY"],
+                    [t for t in waiting_tickets if t["queue_type"] == "REGULAR"],
+                    enabled, ratio, since,
+                )
+                cover_order = [t["id"] for t in ordered]
+
+            # 6. Infomercial videos for the display
+            cursor = await db.execute(
+                "SELECT id, filename, original_name, size_bytes, sort_order FROM media ORDER BY sort_order, id"
+            )
+            media = [
+                {
+                    "id": r["id"],
+                    "original_name": r["original_name"],
+                    "size_bytes": r["size_bytes"],
+                    "url": f"/media/{r['filename']}",
+                    "sort_order": r["sort_order"]
+                }
+                for r in await cursor.fetchall()
+            ]
+
+            # 7. Announcements for the display (the admin screen lists inactive ones too)
+            cursor = await db.execute(
+                "SELECT id, title, subtitle, body, active, sort_order FROM announcements ORDER BY sort_order, id"
+            )
+            announcements = [
+                {
+                    "id": r["id"],
+                    "title": r["title"],
+                    "subtitle": r["subtitle"],
+                    "body": r["body"],
+                    "active": bool(r["active"]),
+                    "sort_order": r["sort_order"],
+                }
+                for r in await cursor.fetchall()
+            ]
+
             return {
                 "event": "QUEUE_STATE",
                 "action": action or "UPDATE",
@@ -166,7 +212,10 @@ class ConnectionManager:
                 "skipped_tickets": skipped_tickets,
                 "recently_served": recently_served,
                 "last_called_ticket": last_called_ticket,
-                "settings": settings
+                "settings": settings,
+                "cover_order": cover_order,
+                "media": media,
+                "announcements": announcements
             }
 
 ws_manager = ConnectionManager()
