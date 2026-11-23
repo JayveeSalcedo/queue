@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Queue Management System – User Manual</title>
+<style>
+@font-face { font-family: "Inter Variable"; src: url("inter.woff2") format("woff2"); font-weight: 100 900; }
+
+:root {
+  --g900:#064e3b; --g800:#065f46; --g700:#047857; --g600:#059669; --g200:#a7f3d0; --g100:#d1fae5; --g50:#ecfdf5;
+  --a50:#fffbeb; --a200:#fde68a; --a400:#fbbf24; --a500:#f59e0b; --a800:#92400e; --a950:#451a03;
+  --s50:#f0f9ff; --s200:#bae6fd; --s600:#0284c7; --s700:#0369a1; --s800:#075985;
+  --n50:#f8fafc; --n100:#f1f5f9; --n200:#e2e8f0; --n300:#cbd5e1; --n400:#94a3b8; --n500:#64748b; --n600:#475569; --n700:#334155; --n900:#0f172a;
+  --red50:#fef2f2; --red700:#b91c1c;
+}
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { font-family: "Inter Variable", system-ui, sans-serif; font-feature-settings: "cv11","ss01"; font-size: 9.4pt; line-height: 1.5; color: var(--n700); background: #fff; }
+
+/* ---------- Page frame ---------- */
+.sheet { position: relative; width: 210mm; height: 297mm; padding: 21mm 17mm 20mm; overflow: hidden; page-break-after: always; break-after: page; background: var(--n50); }
+.sheet:last-child { page-break-after: auto; break-after: auto; }
+.bar { position: absolute; left: 0; right: 0; top: 0; height: 1.6mm; background: linear-gradient(90deg, var(--g800), var(--g700) 60%, var(--a400)); }
+.run { position: absolute; left: 17mm; right: 17mm; top: 7mm; display: flex; justify-content: space-between; font-size: 7.4pt; color: var(--n500); }
+.run b { font-weight: 600; color: var(--n900); }
+.foot { position: absolute; left: 17mm; right: 17mm; bottom: 8mm; display: flex; justify-content: space-between; font-size: 7.4pt; color: var(--n400); border-top: 1px solid var(--n200); padding-top: 2.5mm; }
+
+/* ---------- Type ---------- */
+.eyebrow { font-size: 7.4pt; font-weight: 600; text-transform: uppercase; letter-spacing: .09em; color: var(--g700); }
+h1 { font-size: 30pt; line-height: 1.08; font-weight: 700; letter-spacing: -.025em; color: var(--n900); }
+h2 { font-size: 20pt; line-height: 1.15; font-weight: 600; letter-spacing: -.02em; color: var(--n900); margin-top: 1.5mm; }
+h3 { font-size: 11pt; font-weight: 600; letter-spacing: -.005em; color: var(--n900); margin: 6.5mm 0 2.4mm; }
+h3:first-of-type { margin-top: 5mm; }
+.lead { font-size: 10.6pt; color: var(--n600); margin-top: 2mm; max-width: 140mm; }
+p { margin-bottom: 2mm; }
+b, strong { font-weight: 600; color: var(--n900); }
+.muted { color: var(--n500); }
+.small { font-size: 8.2pt; }
+.tn { font-weight: 700; letter-spacing: -.01em; font-variant-numeric: proportional-nums lining-nums; color: var(--n900); white-space: nowrap; }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 8.3pt; color: var(--n900); background: var(--n100); border-radius: 4px; padding: .2mm 1.3mm; white-space: nowrap; }
+
+/* ---------- Building blocks ---------- */
+.card { background: #fff; border: 1px solid var(--n200); border-radius: 3mm; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+.pad { padding: 4mm 4.5mm; }
+.cols { display: grid; gap: 4mm; }
+.c2 { grid-template-columns: 1fr 1fr; }
+.c3 { grid-template-columns: 1fr 1fr 1fr; }
+.badge { display: inline-flex; align-items: center; gap: 1mm; border-radius: 99px; padding: .2mm 2.2mm; font-size: 7.4pt; font-weight: 500; line-height: 1.6; white-space: nowrap; }
+.b-r { background: var(--g50); color: #065f46; box-shadow: inset 0 0 0 1px var(--g200); }
+.b-p { background: var(--a50); color: var(--a800); box-shadow: inset 0 0 0 1px var(--a200); }
+.b-c { background: var(--s50); color: var(--s800); box-shadow: inset 0 0 0 1px var(--s200); }
+.b-n { background: var(--n100); color: var(--n700); box-shadow: inset 0 0 0 1px var(--n200); }
+.dot { width: 2mm; height: 2mm; border-radius: 50%; display: inline-block; flex: none; }
+.d-r { background: var(--g600); } .d-p { background: var(--a500); } .d-c { background: var(--s600); }
+
+/* inline button labels – match the app's buttons */
+.k { display: inline-block; font-size: 8.4pt; font-weight: 600; line-height: 1.45; padding: .15mm 2mm; border-radius: 1.6mm; background: #fff; color: var(--n700); border: 1px solid var(--n300); white-space: nowrap; }
+.k.p { background: var(--g800); border-color: var(--g800); color: #fff; }
+.k.d { color: var(--red700); border-color: #fecaca; }
+
+/* numbered steps – same as the app's install dialog */
+ol.steps { list-style: none; counter-reset: s; }
+ol.steps > li { counter-increment: s; position: relative; padding-left: 7.5mm; margin-bottom: 2.6mm; }
+ol.steps > li::before { content: counter(s); position: absolute; left: 0; top: .5mm; width: 4.6mm; height: 4.6mm; border-radius: 50%; background: var(--g100); color: var(--g800); font-size: 7.4pt; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+ul.dots { list-style: none; }
+ul.dots > li { position: relative; padding-left: 4mm; margin-bottom: 1.2mm; }
+ul.dots > li::before { content: ""; position: absolute; left: .6mm; top: 2.1mm; width: 1.4mm; height: 1.4mm; border-radius: 50%; background: var(--g600); }
+
+.note { display: flex; gap: 2.6mm; border-radius: 2.6mm; padding: 3mm 3.6mm; font-size: 8.6pt; line-height: 1.45; background: var(--g50); box-shadow: inset 0 0 0 1px var(--g200); color: #065f46; margin-top: 3.5mm; }
+.note.warn { background: var(--a50); box-shadow: inset 0 0 0 1px var(--a200); color: var(--a800); }
+.note b { color: inherit; }
+.note .ic { flex: none; width: 4.6mm; height: 4.6mm; border-radius: 1.4mm; background: var(--g100); color: var(--g800); font-weight: 700; font-size: 8pt; display: flex; align-items: center; justify-content: center; }
+.note.warn .ic { background: #fef3c7; color: #b45309; }
+
+/* tables */
+table { width: 100%; border-collapse: collapse; font-size: 8.7pt; }
+th { text-align: left; font-size: 7.4pt; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--n500); background: var(--n50); padding: 2mm 3.5mm; border-bottom: 1px solid var(--n200); }
+td { padding: 2.1mm 3.5mm; border-bottom: 1px solid var(--n100); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+.tbl { overflow: hidden; }
+td:first-child { color: var(--n900); font-weight: 500; white-space: nowrap; }
+td.w { white-space: normal; }
+
+/* ---------- App mock-ups ---------- */
+.fig { background: var(--n100); border-radius: 3mm; padding: 4mm; margin-top: 3mm; }
+.fig-cap { font-size: 7.4pt; color: var(--n500); margin-top: 2mm; text-align: center; }
+.qcard { background: #fff; border: 1px solid var(--n200); border-radius: 2.6mm; display: flex; align-items: center; gap: 3.5mm; padding: 2.8mm 3.5mm; margin-bottom: 2mm; }
+.qcard:last-child { margin-bottom: 0; }
+.tile { width: 11mm; height: 11mm; border-radius: 2.4mm; display: flex; align-items: center; justify-content: center; font-size: 15pt; font-weight: 700; flex: none; }
+.t-r { background: var(--g700); color: #fff; } .t-p { background: var(--a500); color: var(--a950); } .t-c { background: var(--s700); color: #fff; }
+.qcard .t { flex: 1; font-size: 10.4pt; font-weight: 600; color: var(--n900); line-height: 1.25; }
+.qcard .t span { display: block; font-size: 7.6pt; font-weight: 400; color: var(--n500); }
+.qcard .n { text-align: right; font-size: 12pt; font-weight: 600; color: var(--n900); line-height: 1.1; }
+.qcard .n span { display: block; font-size: 7pt; font-weight: 400; color: var(--n500); }
+
+.serve { background: #fff; border: 1px solid var(--n200); border-radius: 3mm; overflow: hidden; }
+.serve .top { text-align: center; padding: 4.5mm 5mm 3mm; }
+.serve .big { font-size: 34pt; line-height: 1.05; margin-top: 1mm; }
+.serve .next { margin: 0 5mm 4mm; background: var(--g800); color: #fff; font-weight: 600; font-size: 12pt; text-align: center; padding: 3mm; border-radius: 2.6mm; }
+.serve .row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2mm; padding: 3mm 5mm; background: var(--n50); border-top: 1px solid var(--n200); }
+.serve .row div { background: #fff; border: 1px solid var(--n300); border-radius: 1.8mm; text-align: center; font-size: 8.4pt; font-weight: 600; padding: 2mm 0; color: var(--n700); }
+
+.mini { background: var(--n50); border-radius: 3mm; padding: 2.5mm; display: flex; gap: 1.6mm; box-shadow: inset 0 0 0 1px var(--n200); }
+.mini div { flex: 1; background: #fff; border: 1px solid var(--n300); border-radius: 2mm; text-align: center; font-size: 8pt; font-weight: 600; padding: 2.2mm 0; line-height: 1.25; color: var(--n700); }
+.mini div small { display: block; font-size: 6.4pt; font-weight: 500; color: var(--n500); }
+.mini div.p { flex: 1.8; background: var(--g800); border-color: var(--g800); color: #fff; }
+.mini div.p small { color: var(--g100); }
+.mini div.m { flex: .8; }
+
+.tv { background: var(--n50); border-radius: 2.4mm; overflow: hidden; box-shadow: 0 0 0 1px var(--n300); }
+.tv .g { height: 1.2mm; background: linear-gradient(90deg, var(--g800), var(--g700), var(--a400)); }
+.tv .hd { display: flex; align-items: center; gap: 2mm; padding: 2.4mm 3.5mm 1.6mm; }
+.tv .hd img { width: 6mm; height: 6mm; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px var(--n200); }
+.tv .hd b { font-size: 7.6pt; flex: 1; }
+.tv .hd span { font-size: 8pt; font-weight: 600; color: var(--n900); }
+.tv .main { display: grid; grid-template-columns: 3fr 2fr; gap: 2mm; padding: 0 3.5mm 2mm; }
+.tv .media { background: #0b1220; border-radius: 1.6mm; color: #94a3b8; font-size: 7pt; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.4; }
+.tv .stack { display: flex; flex-direction: column; gap: 1.6mm; }
+.tv .cc { background: #fff; border: 1px solid var(--n200); border-radius: 1.6mm; overflow: hidden; display: flex; }
+.tv .cc .l { flex: 1; padding: 1.4mm 2mm 1.4mm 2.4mm; border-top: .6mm solid; }
+.tv .cc .l small { display: block; font-size: 5.2pt; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--n600); }
+.tv .cc .l div { font-size: 13pt; font-weight: 700; line-height: 1.1; letter-spacing: -.01em; }
+.tv .cc .r { width: 38%; background: var(--n50); border-left: 1px solid var(--n200); padding: 1.2mm 2mm; font-size: 6.6pt; font-weight: 600; color: var(--n900); line-height: 1.3; }
+.tv .cc .r small { display: block; font-size: 4.8pt; letter-spacing: .05em; text-transform: uppercase; color: var(--n500); }
+.tv .ft { margin: 0 3.5mm 3mm; background: #fff; border: 1px solid var(--n200); border-radius: 1.6mm; display: flex; overflow: hidden; font-size: 6.8pt; font-weight: 600; color: var(--n900); }
+.tv .ft i { font-style: normal; background: var(--g800); color: #fff; padding: 1.2mm 2.6mm; font-size: 5.6pt; letter-spacing: .07em; text-transform: uppercase; display: flex; align-items: center; }
+.tv .ft span { padding: 1.2mm 2.6mm; }
+
+.pattern { display: flex; gap: 1.2mm; margin: 1.5mm 0 1mm; }
+.pattern span { width: 6.6mm; height: 6.6mm; border-radius: 1.6mm; font-size: 8pt; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.pattern .pp { background: var(--a500); color: var(--a950); } .pattern .rr { background: var(--g700); color: #fff; }
+
+.switch { display: inline-block; vertical-align: -1.2mm; width: 7mm; height: 4mm; border-radius: 99px; background: var(--g700); position: relative; }
+.switch::after { content: ""; position: absolute; top: .5mm; right: .5mm; width: 3mm; height: 3mm; border-radius: 50%; background: #fff; }
+
+/* cover */
+.cover { background: #fff; padding: 0; }
+.cover .hero { padding: 34mm 22mm 0; }
+.cover img.logo { width: 24mm; height: 24mm; border-radius: 50%; box-shadow: 0 0 0 1px var(--n200); background: #fff; object-fit: contain; }
+.cover h1 { margin-top: 11mm; font-size: 38pt; }
+.cover .sub { font-size: 13pt; color: var(--n600); margin-top: 4mm; max-width: 120mm; line-height: 1.4; }
+.cover .lines { display: flex; gap: 2.5mm; margin-top: 8mm; }
+.cover .journey { position: absolute; left: 22mm; right: 22mm; bottom: 26mm; }
+.cover .journey .eyebrow { margin-bottom: 3mm; }
+.jrow { display: grid; grid-template-columns: 8mm 1fr auto 10mm; align-items: baseline; gap: 2mm; padding: 2.5mm 0; border-top: 1px solid var(--n200); font-size: 10pt; }
+.jrow:last-child { border-bottom: 1px solid var(--n200); }
+.jrow .no { color: var(--g700); font-weight: 600; }
+.jrow .nm { font-weight: 600; color: var(--n900); }
+.jrow .pg { text-align: right; color: var(--n500); font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<section class="sheet cover">
+  <div class="bar"></div>
+  <div class="hero">
+    <img class="logo" src="logo.png" alt="">
+    <h1>Queue Management<br>System</h1>
+    <p class="sub">User manual. Everything you need to run a service day, from first sign-in to the end-of-day report.</p>
+    <div class="lines">
+      <span class="badge b-r"><i class="dot d-r"></i>Regular</span>
+      <span class="badge b-p"><i class="dot d-p"></i>Priority</span>
+      <span class="badge b-c"><i class="dot d-c"></i>Request / Complaint</span>
+    </div>
+  </div>
+  <div class="journey">
+    <div class="eyebrow">Your day, in order</div>
+    <div class="jrow"><span class="no">1</span><span class="nm">Get started</span><span class="muted">Everyone</span><span class="pg">2</span></div>
+    <div class="jrow"><span class="no">2</span><span class="nm">Set up the office</span><span class="muted">Admin</span><span class="pg">3</span></div>
+    <div class="jrow"><span class="no">3</span><span class="nm">Issue tickets</span><span class="muted">Guard</span><span class="pg">4</span></div>
+    <div class="jrow"><span class="no">4</span><span class="nm">Serve customers</span><span class="muted">Counters</span><span class="pg">5</span></div>
+    <div class="jrow"><span class="no">5</span><span class="nm">Mini window and covering a partner</span><span class="muted">Counters</span><span class="pg">6</span></div>
+    <div class="jrow"><span class="no">6</span><span class="nm">The waiting-room TV</span><span class="muted">Everyone</span><span class="pg">7</span></div>
+    <div class="jrow"><span class="no">7</span><span class="nm">Review the day, and quick fixes</span><span class="muted">Admin</span><span class="pg">8</span></div>
+  </div>
+</section>
+
+<!-- ============ 1 GET STARTED ============ -->
+<section class="sheet">
+  <div class="bar"></div>
+  <div class="run"><span><b>Queue Management System</b> · User manual</span><span>Everyone</span></div>
+  <div class="eyebrow">Chapter 1</div>
+  <h2>Get started</h2>
+  <p class="lead">Three queues, one server, every screen live. Queue colours never change.</p>
+
+  <h3>The three queues</h3>
+  <div class="card tbl">
+    <table>
+      <tr><th>Queue</th><th>Ticket</th><th>Counter</th><th>Who it is for</th></tr>
+      <tr><td><span class="badge b-r"><i class="dot d-r"></i>Regular</span></td><td><span class="tn">R-001</span></td><td>Counter 1</td><td class="w">General inquiries and transactions</td></tr>
+      <tr><td><span class="badge b-p"><i class="dot d-p"></i>Priority</span></td><td><span class="tn">P-001</span></td><td>Counter 2</td><td class="w">Senior citizens, PWD, pregnant women</td></tr>
+      <tr><td><span class="badge b-c"><i class="dot d-c"></i>Request / Complaint</span></td><td><span class="tn">C-001</span></td><td>Counter 3</td><td class="w">Formal requests and complaints</td></tr>
+    </table>
+  </div>
+
+  <h3>Stations and accounts</h3>
+  <div class="card tbl">
+    <table>
+      <tr><th>Station</th><th>Address</th><th>Username / password</th></tr>
+      <tr><td>Guard</td><td><code>/guard</code></td><td><code>guard</code> / <code>guard123</code></td></tr>
+      <tr><td>Counters 1, 2, 3</td><td><code>/counter/1</code> · <code>/2</code> · <code>/3</code></td><td><code>counter1</code>, <code>counter2</code>, <code>counter3</code> / <code>counter123</code></td></tr>
+      <tr><td>Public display</td><td><code>/display</code></td><td class="w muted">No sign-in needed</td></tr>
+      <tr><td>Admin</td><td><code>/admin</code></td><td><code>admin</code> / <code>admin123</code></td></tr>
+    </table>
+  </div>
+  <p class="small muted" style="margin-top:2mm">Put the server's address in front, for example <code>http://192.168.1.10:8000/guard</code>. The Home page (<code>/</code>) shows it. On cable and Wi-Fi, use the address of your network.</p>
+
+  <h3 style="margin-top:5mm">Install and sign in</h3>
+  <div class="card pad">
+    <div class="eyebrow">Server PC · once</div>
+    <p style="margin:1.5mm 0 0">Run <b>QueueSetup.exe</b> and approve the administrator prompt. The server then starts with Windows and a <b>Queue System</b> icon appears on the Desktop. Setup also offers to make this PC's network address <b>fixed</b>, so station links never change: keep the suggested option unless your network person gives you a specific address. To undo it later, use <b>Use automatic IP</b> in the Start Menu. If Windows shows a blue “protected your PC” box, click <b>More info</b>, then <b>Run anyway</b>.</p>
+  </div>
+  <p style="margin-top:3.5mm"><b>Every other device:</b> open the server address, click <span class="k">Sign in</span>, then click <span class="k">Install</span> in the top bar to add an icon.</p>
+  <div class="card tbl" style="margin-top:2mm">
+    <table>
+      <tr><th>Device</th><th>Add the icon</th></tr>
+      <tr><td>Windows PC</td><td class="w"><span class="k">Download Windows shortcuts</span>, open the file, choose <b>Keep</b>. Counter accounts get <b>Counter N</b> and a small <b>Counter N - Mini</b> icon.</td></tr>
+      <tr><td>Android phone</td><td class="w">In <b>Chrome</b>: <b>⋮</b> menu → <b>Add to Home screen</b> → <b>Add</b>.</td></tr>
+      <tr><td>iPhone / iPad</td><td class="w">In <b>Safari</b>: <b>Share</b> → <b>Add to Home Screen</b> → <b>Add</b>.</td></tr>
+    </table>
+  </div>
+
+  <div class="note"><span class="ic">i</span><span><b>Top bar:</b> green <b>Connected</b> means live. Red <b>Reconnecting</b> means the link dropped and will recover by itself.</span></div>
+
+  <div class="foot"><span>Queue Management System · User manual</span><span>2</span></div>
+</section>
+
+<!-- ============ 2 SET UP ============ -->
+<section class="sheet">
+  <div class="bar"></div>
+  <div class="run"><span><b>Queue Management System</b> · User manual</span><span>Admin</span></div>
+  <div class="eyebrow">Chapter 2</div>
+  <h2>Set up the office</h2>
+  <p class="lead">Do this once, then change it whenever you like. Sign in at <code>/admin</code>.</p>
+
+  <h3>1 · Settings tab</h3>
+  <div class="card tbl">
+    <table>
+      <tr><th>Setting</th><th>What it does</th></tr>
+      <tr><td>Office name, Tagline</td><td class="w">Shown on the TV and top bar. Name also on printed tickets.</td></tr>
+      <tr><td>Ticket prefixes</td><td class="w">The letter before each number, up to 3 characters. Defaults: R, P, C.</td></tr>
+      <tr><td>Hotline numbers</td><td class="w">One per row: label and number. They scroll along the bottom of the TV. Use <span class="k">Add hotline</span> for more.</td></tr>
+      <tr><td>TV display sound</td><td class="w">A <span class="switch"></span> switch. Only the admin can mute the TV. It applies instantly.</td></tr>
+    </table>
+  </div>
+  <p class="small muted" style="margin-top:2mm">Press <span class="k p">Save changes</span> to apply everything except the sound switch.</p>
+
+  <h3>Load balancing: Priority and Regular</h3>
+  <p>By default Counter 1 calls only Regular and Counter 2 only Priority. These two switches let them share work. Sharing follows a pattern, and each line stays first come, first served.</p>
+  <div class="card tbl">
+    <table>
+      <tr><th>Switch</th><th>Off</th><th>On</th></tr>
+      <tr><td class="w">Balance when one counter is paused</td><td class="w">The covering counter calls all Priority before any Regular.</td><td class="w">It follows the pattern below.</td></tr>
+      <tr><td class="w">Balance when both counters are open</td><td class="w">Each counter keeps its own line.</td><td class="w">Both counters share both lines, using the pattern.</td></tr>
+    </table>
+  </div>
+  <div style="margin-top:3mm" class="small">
+    <b>Pattern with “Regular customers per Priority” = 3</b> (choose 1–10)
+    <div class="pattern"><span class="pp">P</span><span class="rr">R</span><span class="rr">R</span><span class="rr">R</span><span class="pp">P</span><span class="rr">R</span><span class="rr">R</span><span class="rr">R</span></div>
+  </div>
+
+  <h3>2 · Display playlist tab</h3>
+  <ul class="dots">
+    <li><span class="k p">Upload video</span> adds MP4, M4V or WebM files, up to 1 GB each.</li>
+    <li>Videos and announcements loop in one order beside the counters. <b>Drag a row</b> to reorder it.</li>
+    <li>The play button previews on a sample TV. The bin removes an item.</li>
+    <li>With nothing here, the TV shows only the three counters.</li>
+  </ul>
+
+  <h3>3 · Announcements tab</h3>
+  <ol class="steps">
+    <li>Click <span class="k p">New announcement</span>.</li>
+    <li>Fill in <b>Title</b> (the orange banner), an optional <b>Subtitle</b>, and the <b>Message</b>. Each line you type becomes its own row. A live preview sits beside the form.</li>
+    <li>Leave <b>Show on the TV display</b> ticked, then <span class="k p">Save announcement</span>.</li>
+  </ol>
+  <p class="small muted">Switch an announcement on or off from the list. Set how long each one shows (5–120 seconds, default 15) at the top of the tab.</p>
+
+  <div class="foot"><span>Queue Management System · User manual</span><span>3</span></div>
+</section>
+
+<!-- ============ 3 GUARD ============ -->
+<section class="sheet">
+  <div class="bar"></div>
+  <div class="run"><span><b>Queue Management System</b> · User manual</span><span>Guard</span></div>
+  <div class="eyebrow">Chapter 3</div>
+  <h2>Issue tickets</h2>
+  <p class="lead">Open the day, then one tap per customer. Use Chrome on an Android phone for the best result.</p>
+
+  <h3>Each morning</h3>
+  <ol class="steps">
+    <li>Sign in at <code>/guard</code>.</li>
+    <li>Tap <span class="k">Start new day (reset numbers to 001)</span>, then <span class="k p">Start new day</span>. Leftover tickets are archived, numbering restarts at 001, and every counter is cleared. Numbers never reset on their own.</li>
+    <li>Tap <span class="k">Connect printer</span> and pick your 58 mm Bluetooth printer. Once connected, every ticket prints automatically.</li>
+  </ol>
+
+  <h3>For each customer</h3>
+  <div class="cols c2" style="align-items:start">
+    <ol class="steps" style="margin-top:1mm">
+      <li>Tap the card for the customer's service. The number on the left is the ticket letter, the number on the right is how many are waiting.</li>
+      <li>The <b>Ticket issued</b> window shows the number. If a printer is connected it prints by itself. If not, tap <span class="k">Browser print</span>.</li>
+      <li>Tap <span class="k">Done</span> and hand over the ticket.</li>
+    </ol>
+    <div class="fig" style="margin-top:0">
+      <div class="qcard"><div class="tile t-r">R</div><div class="t">Regular<span>Counter 1 · General inquiries</span></div><div class="n">4<span>waiting</span></div></div>
+      <div class="qcard"><div class="tile t-p">P</div><div class="t">Priority<span>Counter 2 · Seniors, PWD, pregnant</span></div><div class="n">1<span>waiting</span></div></div>
+      <div class="qcard"><div class="tile t-c">C</div><div class="t">Request / Complaint<span>Counter 3 · Requests</span></div><div class="n">0<span>waiting</span></div></div>
+    </div>
+  </div>
+  <p class="small muted">No Bluetooth printer? <span class="k">Browser print</span> opens the print dialog, already sized for a 58 mm roll.</p>
+
+  <h3>Tapped the wrong card</h3>
+  <ul class="dots">
+    <li>In the ticket window, tap <span class="k d">Wrong button? Void this ticket</span>, then confirm with <span class="k d">Void R-005</span>.</li>
+    <li>Later, find it under <b>Issued from this device</b> and tap <span class="k d">Void</span>. This works only while the customer is still waiting. Once called, it shows <i>Already called</i>.</li>
+    <li>If it was the latest number, that number is issued again to the next customer.</li>
+  </ul>
+
+  <h3>See who is waiting</h3>
+  <p>Open <b>Customers in line</b> to list every waiting ticket with the time it was issued.</p>
+
+  <div class="note warn"><span class="ic">!</span><span><b>Starting a new day closes every ticket still waiting or being served.</b> Do it before the first customer, not during service.</span></div>
+
+  <div class="foot"><span>Queue Management System · User manual</span><span>4</span></div>
+</section>
+
+<!-- ============ 4 COUNTER ============ -->
+<section class="sheet">
+  <div class="bar"></div>
+  <div class="run"><span><b>Queue Management System</b> · User manual</span><span>Counters</span></div>
+  <div class="eyebrow">Chapter 4</div>
+  <h2>Serve customers</h2>
+  <p class="lead">Press <b>Next customer</b>. Everything else follows from there.</p>
+
+  <div class="cols c2" style="margin-top:2mm; align-items:start">
+    <div>
+      <h3>The service loop</h3>
+      <ol class="steps">
+        <li>Sign in. You land on your counter's page, for example <code>/counter/1</code>.</li>
+        <li>Press <span class="k p">Next customer</span>. The number appears under <b>Now serving</b>, and the TV flashes, chimes and speaks it.</li>
+        <li>Serve the customer, then press <span class="k">Complete</span>.</li>
+        <li>Press <span class="k p">Next customer</span> again.</li>
+      </ol>
+      <p class="small muted">To call someone specific, press <span class="k">Call</span> beside their number in the <b>Waiting list</b>. The top row is marked <span class="badge b-r" style="background:var(--g800);color:#fff;box-shadow:none">Next</span>.</p>
+    </div>
+    <div class="fig" style="margin-top:3mm">
+      <div class="serve">
+        <div class="top"><div class="eyebrow" style="color:var(--n500)">Now serving</div><div class="big tn">R-014</div><div class="small muted">Called at 9:42 AM</div></div>
+        <div class="next">Next customer ›</div>
+        <div class="row"><div>Complete</div><div>Recall</div><div>Skip</div><div>Transfer</div></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>When the customer needs something else</h3>
+  <div class="card tbl">
+    <table>
+      <tr><th>Button</th><th>Use it when</th><th>What happens</th></tr>
+      <tr><td><span class="k">Complete</span></td><td class="w">Service is done.</td><td class="w">Ticket closes. Counter is free.</td></tr>
+      <tr><td><span class="k">Recall</span></td><td class="w">The customer didn't hear.</td><td class="w">The TV announces the number again.</td></tr>
+      <tr><td><span class="k">Skip</span></td><td class="w">Nobody came to the counter.</td><td class="w">Ticket moves to <b>On hold</b>.</td></tr>
+      <tr><td><span class="k">Transfer</span></td><td class="w">They came to the wrong counter.</td><td class="w">Choose a queue and an optional note. They rejoin that line.</td></tr>
+    </table>
+  </div>
+
+  <h3>On hold</h3>
+  <p>Skipped customers wait in the <b>On hold</b> list, who may still come back.</p>
+  <div class="cols c2">
+    <div class="card pad"><span class="k p">Call back</span><p class="small" style="margin:2mm 0 0">They returned. Calls them again.</p></div>
+    <div class="card pad"><span class="k">No show</span><p class="small" style="margin:2mm 0 0">Confirm once. They leave the list and are never called again.</p></div>
+  </div>
+
+  <div class="note"><span class="ic">i</span><span><b>Tip.</b> Keep the <span class="k">Mini window</span> open all day (next page) and use this full page for the waiting list and on-hold list.</span></div>
+
+  <div class="foot"><span>Queue Management System · User manual</span><span>5</span></div>
+</section>
+
+<!-- ============ 5 MINI + COVER ============ -->
+<section class="sheet">
+  <div class="bar"></div>
+  <div class="run"><span><b>Queue Management System</b> · User manual</span><span>Counters</span></div>
+  <div class="eyebrow">Chapter 5</div>
+  <h2>Mini window and covering a partner</h2>
+  <p class="lead">A small strip with only the buttons you use all day, and a way to keep customers moving when a counter closes.</p>
+
+  <h3>Open the mini window</h3>
+  <ul class="dots">
+    <li>On the counter page, click <span class="k">Mini window</span>. If nothing opens, allow pop-ups for the site in the address bar.</li>
+    <li>On Windows, double-click the <b>Counter N - Mini</b> Desktop icon. It stays on top of other programs and can start with Windows.</li>
+  </ul>
+  <div class="fig">
+    <div class="mini"><div class="p">Next ›<small>3 waiting</small></div><div>Complete<small>R-014</small></div><div>Recall</div><div>Skip</div><div>Pause</div><div class="m">More</div></div>
+    <p class="fig-cap">The serving number also shows in the window title and on the taskbar.</p>
+  </div>
+
+  <div class="card tbl" style="margin-top:3mm">
+    <table>
+      <tr><th>Button</th><th>What it does</th></tr>
+      <tr><td><span class="k p">Next</span></td><td class="w">Calls the next customer. Shows how many are waiting.</td></tr>
+      <tr><td><span class="k">Complete</span> <span class="k">Recall</span> <span class="k">Skip</span></td><td class="w">Same as the full page. Disabled until someone is being served.</td></tr>
+      <tr><td><span class="k">Pause</span> / <span class="k">Resume</span></td><td class="w">Counters 1 and 2 only. See below.</td></tr>
+      <tr><td><span class="k">More</span></td><td class="w"><b>Transfer customers…</b> and <b>No-show</b> for the customer being served.</td></tr>
+    </table>
+  </div>
+
+  <h3>Transfer several customers at once</h3>
+  <ol class="steps">
+    <li>Choose <span class="k">More</span> → <b>Transfer customers…</b> The customer at the counter is already ticked.</li>
+    <li>Tick the others, or use <b>All</b> / <b>None</b>.</li>
+    <li>Under <b>Send to</b>, pick <span class="k">Regular</span>, <span class="k">Priority</span> or <span class="k">Request / Complaint</span>.</li>
+  </ol>
+
+  <h3>Closing a counter: pause and cover</h3>
+  <p>Counters 1 and 2 cover each other. Counter 3 cannot be paused.</p>
+  <ol class="steps">
+    <li>Press <span class="k">Pause counter</span> (or <span class="k">Pause</span> in the mini window). The TV shows <b>On Break · Please proceed to Counter N</b>.</li>
+    <li>The partner counter shows a green <b>Covering for…</b> banner. Its <span class="k p">Next customer</span> now calls both lines, Priority first, or by the pattern if you enabled load balancing.</li>
+    <li>When you return, press <span class="k p">Resume counter</span>.</li>
+  </ol>
+
+  <div class="note"><span class="ic">i</span><span>The status line under the mini buttons shows confirmations and warns <b>Lost connection to the queue server. Reconnecting…</b> if the link drops.</span></div>
+
+  <div class="foot"><span>Queue Management System · User manual</span><span>6</span></div>
+</section>
+
+<!-- ============ 6 TV ============ -->
+<section class="sheet">
+  <div class="bar"></div>
+  <div class="run"><span><b>Queue Management System</b> · User manual</span><span>Everyone</span></div>
+  <div class="eyebrow">Chapter 6</div>
+  <h2>The waiting-room TV</h2>
+  <p class="lead">Customers watch this screen. Staff only need to set it up once.</p>
+
+  <h3>Set up the TV</h3>
+  <ol class="steps">
+    <li>Open <code>/display</code> in the TV's browser and go full screen. No sign-in is needed.</li>
+    <li><b>Click the screen once</b>, or press any remote key, to switch on sound. Browsers require this after every restart.</li>
+    <li>Sound is controlled only from <b>Admin → Settings → TV display sound</b>. There is no mute button on the TV.</li>
+  </ol>
+
+  <h3>What customers see</h3>
+  <div class="fig">
+    <div class="tv">
+      <div class="g"></div>
+      <div class="hd"><img src="logo.png" alt=""><b>PANELCO III SOUTHEAST AREA OFFICE</b><span>9:42 AM</span></div>
+      <div class="main">
+        <div class="media">Videos and<br>announcements<br>play here</div>
+        <div class="stack">
+          <div class="cc"><div class="l" style="border-color:var(--g800)"><small>Counter 1 · Regular</small><div style="color:var(--g800)">R-014</div></div><div class="r"><small>Next in line</small>R-015<br>R-016</div></div>
+          <div class="cc"><div class="l" style="border-color:var(--a400)"><small>Counter 2 · Priority</small><div style="color:#d97706">P-006</div></div><div class="r"><small>Next in line</small>P-007</div></div>
+          <div class="cc"><div class="l" style="border-color:var(--s700)"><small>Counter 3 · Request</small><div style="color:var(--s800)">C-003</div></div><div class="r"><small>Next in line</small>C-004</div></div>
+        </div>
+      </div>
+      <div class="ft"><i>Hotlines</i><span>Billing: (000) 000-0000 &nbsp;●&nbsp; Emergency: 000-0000</span></div>
+    </div>
+    <p class="fig-cap">Sample numbers. With no videos or announcements, the three counters fill the whole screen.</p>
+  </div>
+
+  <h3>When a customer is called</h3>
+  <ul class="dots">
+    <li>The counter's card <b>flashes amber</b>, a chime plays, and a voice reads the number and counter, for example <i>“Now serving ticket R-023, please proceed to Counter 1.”</i></li>
+    <li><b>Recall</b> repeats the announcement.</li>
+    <li>Video volume drops for a few seconds while the call plays.</li>
+  </ul>
+
+  <h3>Other states</h3>
+  <div class="card tbl">
+    <table>
+      <tr><th>You see</th><th>It means</th></tr>
+      <tr><td>Available</td><td class="w">The counter is open and nobody is being served.</td></tr>
+      <tr><td>On Break · Please proceed to Counter N</td><td class="w">The counter is paused. Customers are sent to its partner.</td></tr>
+      <tr><td>Waiting · number</td><td class="w">How many are in that line. A covering counter shows both lines combined.</td></tr>
+      <tr><td>Welcome notice in the footer</td><td class="w">No hotlines are set yet. Add them in Admin → Settings.</td></tr>
+    </table>
+  </div>
+
+  <div class="foot"><span>Queue Management System · User manual</span><span>7</span></div>
+</section>
+
+<!-- ============ 7 REVIEW + FIXES ============ -->
+<section class="sheet">
+  <div class="bar"></div>
+  <div class="run"><span><b>Queue Management System</b> · User manual</span><span>Admin</span></div>
+  <div class="eyebrow">Chapter 7</div>
+  <h2>Review the day, and quick fixes</h2>
+  <p class="lead">Watch performance live, export records, and solve common problems fast.</p>
+
+  <h3>Overview tab</h3>
+  <div class="cols c3" style="grid-template-columns:repeat(4,1fr)">
+    <div class="card pad" style="padding:3mm"><div class="small muted">Tickets issued</div><div style="font-size:17pt;font-weight:600;color:var(--n900);line-height:1.2">42</div></div>
+    <div class="card pad" style="padding:3mm"><div class="small muted">Completed</div><div style="font-size:17pt;font-weight:600;color:var(--n900);line-height:1.2">36</div></div>
+    <div class="card pad" style="padding:3mm"><div class="small muted">Average wait</div><div style="font-size:17pt;font-weight:600;color:var(--n900);line-height:1.2">6 <span class="small muted" style="font-weight:400">min</span></div></div>
+    <div class="card pad" style="padding:3mm"><div class="small muted">Average service</div><div style="font-size:17pt;font-weight:600;color:var(--n900);line-height:1.2">4 <span class="small muted" style="font-weight:400">min</span></div></div>
+  </div>
+  <p class="fig-cap" style="text-align:left;margin-top:1.5mm">Sample figures.</p>
+  <p style="margin-top:1.5mm">Below the totals, <b>Tickets by queue</b> and <b>Customers served by counter</b> show today's split. Press <span class="k">Refresh</span> to reload.</p>
+
+  <h3>Ticket log tab</h3>
+  <ol class="steps">
+    <li>Pick a <b>Date</b>. Every ticket for that day is listed with queue, status, issued, called and completed times, counter and operator.</li>
+    <li>Press <span class="k">Export CSV</span> to open the same records in a spreadsheet.</li>
+  </ol>
+
+  <h3>Quick fixes</h3>
+  <div class="card tbl">
+    <table>
+      <tr><th>Problem</th><th>Try this</th></tr>
+      <tr><td class="w">Red <b>Reconnecting</b> badge stays</td><td class="w">Check the Wi-Fi or cable, and that the server PC is on.</td></tr>
+      <tr><td class="w">TV has no sound</td><td class="w">Click the TV screen once. Check <b>TV display sound</b> is on in Admin → Settings, then the TV volume.</td></tr>
+      <tr><td class="w">Printer won't connect</td><td class="w">Use Chrome on Android, with Bluetooth and the printer on. Or use <span class="k">Browser print</span>.</td></tr>
+      <tr><td class="w">Mini window won't open</td><td class="w">Allow pop-ups for the site in the address bar, then try again.</td></tr>
+      <tr><td class="w">Can't sign in</td><td class="w">Check the username and password. A counter account opens only its own counter. Ask the admin.</td></tr>
+      <tr><td class="w">Server stopped responding</td><td class="w">On the server PC: Start menu → <b>Queue System</b> → <b>Restart queue server</b>. <b>Server log</b> is in the same folder.</td></tr>
+      <tr><td class="w">Wrong ticket was printed</td><td class="w">Void it from the Guard screen while the customer is still waiting.</td></tr>
+    </table>
+  </div>
+
+  <div class="note"><span class="ic">i</span><span><b>Your data is safe.</b> The database, backups and logs live in <code>C:\ProgramData\QueueSystem</code> and are kept when you upgrade or uninstall. Start menu → <b>Queue System</b> → <b>Database backups</b> opens them.</span></div>
+
+  <div class="foot"><span>Queue Management System · User manual</span><span>8</span></div>
+</section>
+
+</body>
+</html>

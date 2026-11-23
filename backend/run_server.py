@@ -36,9 +36,12 @@ def main():
     port = int(os.environ.get("QUEUE_PORT", "8000"))
     try:
         import uvicorn
-        from main import app
+        from main import app, fixed_ip_status, get_local_ips
 
         log.info("Starting queue server on port %s", port)
+        fixed_ip, ip_changed = fixed_ip_status(get_local_ips())
+        if ip_changed:
+            log.warning("This PC no longer has its fixed address %s. Devices using it will not connect.", fixed_ip)
         # log_config=None: keep our file logging instead of uvicorn's console setup
         uvicorn.run(app, host="0.0.0.0", port=port, log_config=None, access_log=False)
     except Exception:

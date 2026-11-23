@@ -1,3 +1,4 @@
+import json
 import mimetypes
 import os
 import socket
@@ -8,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from database import init_db
-from paths import WEB_DIR, DOWNLOADS_DIR, MEDIA_DIR
+from paths import WEB_DIR, DOWNLOADS_DIR, MEDIA_DIR, FIXED_IP_FILE
 from websocket_manager import ws_manager
 from routes import auth_routes, ticket_routes, counter_routes, admin_routes, media_routes, announcement_routes
 
@@ -59,10 +60,18 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception:
         ws_manager.disconnect(websocket)
 
-# LAN Network Info helper
-@app.get("/api/network-info")
-async def get_network_info():
-    hostname = socket.gethostname()
+def read_fixed_ip():
+    """The address the installer made fixed for this PC, or None if it never did."""
+    try:
+        with open(FIXED_IP_FILE, "r", encoding="utf-8-sig") as f:
+            ip = (json.load(f).get("ip") or "").strip()
+        return ip or None
+    except (OSError, ValueError, AttributeError):
+        return None
+
+
+def get_local_ips():
+    """This PC's IPv4 addresses, the one on the connection with the router first."""
     ip_addresses = []
 
     # The address on the connection that has the router (default route) goes first.
@@ -79,7 +88,7 @@ async def get_network_info():
 
     try:
         # Get all local IP addresses
-        addr_infos = socket.getaddrinfo(hostname, None)
+        addr_infos = socket.getaddrinfo(socket.gethostname(), None)
         for item in addr_infos:
             ip = item[4][0]
             if ":" not in ip and not ip.startswith("127.") and not ip.startswith("169.254."):
@@ -87,7 +96,7 @@ async def get_network_info():
                     ip_addresses.append(ip)
     except Exception:
         pass
-    
+
     # Fallback method using connect trick
     if not ip_addresses:
         try:
@@ -98,12 +107,27 @@ async def get_network_info():
             ip_addresses.append(fallback_ip)
         except Exception:
             ip_addresses.append("127.0.0.1")
+    return ip_addresses
 
+
+def fixed_ip_status(ip_addresses):
+    """(fixed_ip, changed): changed is True when the fixed address is no longer on this PC."""
+    fixed_ip = read_fixed_ip()
+    return fixed_ip, bool(fixed_ip and fixed_ip not in ip_addresses)
+
+
+# LAN Network Info helper
+@app.get("/api/network-info")
+async def get_network_info():
+    ip_addresses = get_local_ips()
+    fixed_ip, ip_changed = fixed_ip_status(ip_addresses)
     return {
-        "hostname": hostname,
+        "hostname": socket.gethostname(),
         "primary_ip": ip_addresses[0] if ip_addresses else "127.0.0.1",
         "ip_addresses": ip_addresses,
-        "port": 8000
+        "port": 8000,
+        "fixed_ip": fixed_ip,
+        "ip_changed": ip_changed,
     }
 
 # Files counter PCs download to set themselves up (the always-on-top mini window app).

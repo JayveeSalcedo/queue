@@ -21,10 +21,13 @@ Double-click **`QueueSetup.exe`**, click *Next*, and approve the administrator p
 - installs the server and the web pages,
 - opens the network port (replaces `allow_firewall.bat`),
 - makes the server **start by itself when Windows starts**, even before anyone logs in, and restart itself if it ever stops,
-- puts a **Queue System** icon on the Desktop.
+- puts a **Queue System** icon on the Desktop,
+- offers to give this PC a **fixed network address** (see below).
 
 Your data (database, backups, logs) lives in `C:\ProgramData\QueueSystem` and is **kept** when you upgrade or uninstall. To upgrade, just run a newer `QueueSetup.exe`.
 Start Menu → *Queue System* has **Restart queue server**, **Server log** and **Database backups**.
+
+**Fixed address.** Phones, counters and the TV connect to the server by its address, so it should never change. During setup a page asks how to handle it: keep the PC's current address and make it fixed (recommended), type a different one, or leave the network alone. The installer checks that nobody else already uses a different address you type. For the best result also reserve the address for this PC in the router (or pick one outside the router's automatic range). If the address ever changes anyway, the Home page shows a yellow notice and `server.log` gets a warning. To undo it: Start Menu → *Queue System* → **Use automatic IP**, or answer *Yes* when uninstalling. For unattended installs, `QueueSetup.exe /VERYSILENT /FIXEDIP=1` fixes the current address (without `/FIXEDIP=1` the network is left alone).
 
 > Windows may show a blue "protected your PC" box for an unsigned installer: click **More info → Run anyway**.
 

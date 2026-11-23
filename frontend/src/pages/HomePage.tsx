@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom';
 import { useQueue } from '../context/QueueContext';
 import { api } from '../services/api';
 import { QUEUE_META } from '../queueStyles';
-import { ShieldCheck, Settings, Network, ArrowRight, Tv, Headset } from 'lucide-react';
+import { ShieldCheck, Settings, Network, ArrowRight, Tv, Headset, TriangleAlert } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
   const { waitingCounts } = useQueue();
-  const [networkInfo, setNetworkInfo] = useState<{ primary_ip: string; ip_addresses: string[]; port: number } | null>(null);
+  const [networkInfo, setNetworkInfo] = useState<{ primary_ip: string; ip_addresses: string[]; port: number; fixed_ip: string | null; ip_changed: boolean } | null>(null);
 
   useEffect(() => {
     api.getNetworkInfo().then(setNetworkInfo).catch(() => {});
@@ -98,6 +98,18 @@ export const HomePage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* The installer fixed this PC's address, but it is no longer on it */}
+      {networkInfo?.ip_changed && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <TriangleAlert className="w-4 h-4 mt-0.5 shrink-0" />
+          <div>
+            This PC's address changed from <span className="font-mono font-semibold">{networkInfo.fixed_ip}</span> to{' '}
+            <span className="font-mono font-semibold">{networkInfo.primary_ip}</span>. Phones, counters and the TV
+            that use the old address will not connect until they use the new one.
+          </div>
+        </div>
+      )}
 
       {/* Live summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

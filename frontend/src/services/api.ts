@@ -263,7 +263,10 @@ export const api = {
   },
 
   // Network info
-  async getNetworkInfo(): Promise<{ hostname: string; primary_ip: string; ip_addresses: string[]; port: number }> {
+  async getNetworkInfo(): Promise<{
+    hostname: string; primary_ip: string; ip_addresses: string[]; port: number;
+    fixed_ip: string | null; ip_changed: boolean;
+  }> {
     return request('/network-info');
   },
 };

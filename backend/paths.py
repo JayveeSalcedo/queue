@@ -39,6 +39,7 @@ DB_PATH = os.path.join(DATA_DIR, "queue.db")
 BACKUPS_DIR = os.path.join(DATA_DIR, "backups")
 LOG_DIR = os.path.join(DATA_DIR, "logs")
 MEDIA_DIR = os.path.join(DATA_DIR, "media")  # infomercial videos for the TV display
+FIXED_IP_FILE = os.path.join(DATA_DIR, "fixed-ip.json")  # written by the installer when it fixes the PC's address
 
 
 def get_secret_key() -> str:

@@ -28,6 +28,8 @@ def main():
     print("\n--- 2. Testing Network Info ---")
     net = get("/api/network-info")
     print(f"Hostname: {net['hostname']}, Primary IP: {net['primary_ip']}, Port: {net['port']}")
+    print(f"Fixed IP: {net.get('fixed_ip')}, changed: {net.get('ip_changed')}")
+    assert 'fixed_ip' in net and 'ip_changed' in net
 
     print("\n--- 3. Testing Admin Login ---")
     auth = post("/api/auth/login", {"username": "admin", "password": "admin123"})

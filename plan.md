@@ -271,5 +271,6 @@ When any ticket action occurs (Ticket Created, Called, Recalled, Skipped, Comple
      - **Counter 3**: `http://192.168.1.50:8000/counter/3`
      - **Display**: `http://192.168.1.50:8000/display`
      - **Admin**: `http://192.168.1.50:8000/admin`
+   - The installed server (`QueueSetup.exe`) can also give the host PC a fixed IPv4 address (`windows/set-static-ip.ps1`). The server warns if the fixed address is lost.
 2. **Auto-Start**:
    - Shortcut to `start_server.bat` placed in Windows `shell:startup` folder for zero-touch boot startup.
