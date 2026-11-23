@@ -155,6 +155,20 @@ begin
   Result := True;
 end;
 
+// Reads "key=value" from the lines the script printed. (Inno Setup's TStringList has no Values property.)
+function LineValue(Lines: TStringList; const Key: String): String;
+var
+  I: Integer;
+begin
+  Result := '';
+  for I := 0 to Lines.Count - 1 do
+    if Pos(Key + '=', Lines[I]) = 1 then
+    begin
+      Result := Copy(Lines[I], Length(Key) + 2, Length(Lines[I]));
+      Exit;
+    end;
+end;
+
 procedure DetectNetwork;
 var
   Lines: TStringList;
@@ -167,15 +181,15 @@ begin
     if FileExists(ExpandConstant('{tmp}\ip-result.txt')) then
     begin
       Lines.LoadFromFile(ExpandConstant('{tmp}\ip-result.txt'));
-      if Lines.Values['found'] = '1' then
+      if LineValue(Lines, 'found') = '1' then
       begin
-        CurAdapter := Lines.Values['adapter'];
-        CurIndex := Lines.Values['interface_index'];
-        CurIp := Lines.Values['ip'];
-        CurPrefix := Lines.Values['prefix'];
-        CurGateway := Lines.Values['gateway'];
-        CurDns := Lines.Values['dns'];
-        CurDhcp := Lines.Values['dhcp'] = '1';
+        CurAdapter := LineValue(Lines, 'adapter');
+        CurIndex := LineValue(Lines, 'interface_index');
+        CurIp := LineValue(Lines, 'ip');
+        CurPrefix := LineValue(Lines, 'prefix');
+        CurGateway := LineValue(Lines, 'gateway');
+        CurDns := LineValue(Lines, 'dns');
+        CurDhcp := LineValue(Lines, 'dhcp') = '1';
         Found := IsIPv4(CurIp) and (StrToIntDef(CurPrefix, 0) > 0);
       end;
     end;
