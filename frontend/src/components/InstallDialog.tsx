@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, Monitor, Share, Smartphone, X } from 'lucide-react';
+import { Download, Monitor, Share, Smartphone, Tv, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { detectPlatform } from '../services/platform';
 import { downloadWindowsInstaller, ShortcutSpec } from '../services/windowsShortcuts';
@@ -11,6 +11,9 @@ interface Props {
 }
 
 /** Shortcuts that make sense for whoever is signed in on this PC */
+/** The TV display PC: full screen, sound allowed, starts with Windows */
+const DISPLAY_SHORTCUT: ShortcutSpec = { name: 'Queue Display', path: '/display', kiosk: true, startWithWindows: true };
+
 function shortcutsFor(user: ReturnType<typeof useAuth>['user']): ShortcutSpec[] {
   if (user?.role === 'COUNTER' && user.counter_id) {
     const n = user.counter_id;
@@ -149,6 +152,26 @@ export const InstallDialog: React.FC<Props> = ({ isOpen, onClose }) => {
                   <strong>Run anyway</strong>.
                 </Step>
               </ol>
+            </section>
+          )}
+
+          {/* The TV display PC (Windows) */}
+          {platform.isWindows && (
+            <section className="border-t border-slate-200 pt-5">
+              <h3 className="flex items-center gap-2 font-semibold text-slate-900">
+                <Tv className="w-4 h-4" /> Is this PC the TV display?
+              </h3>
+              <p className="mt-2 text-slate-600">
+                Opens the public display full screen with sound on, and can start by itself when Windows starts.
+              </p>
+              <button
+                onClick={() => downloadWindowsInstaller(window.location.origin, [DISPLAY_SHORTCUT], 'Install-Queue-Display.bat')}
+                className="btn btn-secondary w-full mt-3 py-3"
+              >
+                <Download className="w-4 h-4" />
+                Download TV display shortcut
+              </button>
+              <p className="mt-2 text-xs text-slate-500">Open the file the same way. To close the display press Alt+F4.</p>
             </section>
           )}
 

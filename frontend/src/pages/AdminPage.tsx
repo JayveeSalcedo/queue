@@ -2,11 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AdminMetrics, QueueType, Ticket } from '../types';
 import { PlaylistEntry, buildPlaylist } from '../playlist';
 import { AnnouncementSlide } from '../components/AnnouncementSlide';
+import { ReportsPanel } from '../components/ReportsPanel';
+import { AdminAccountCard } from '../components/AdminAccountCard';
 import { useQueue } from '../context/QueueContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { QUEUE_META, queueLabel, formatTime } from '../queueStyles';
 import { api } from '../services/api';
 import { 
   BarChart3, 
+  TrendingUp,
   Download, 
   Settings, 
   Clock, 
@@ -69,13 +73,14 @@ const Switch: React.FC<{ on: boolean; label: string; onToggle: () => void }> = (
 );
 
 export const AdminPage: React.FC = () => {
+  const confirm = useConfirm();
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const [activeTab, setActiveTab] = useState<'metrics' | 'history' | 'media' | 'announcements' | 'settings'>('metrics');
+  const [activeTab, setActiveTab] = useState<'metrics' | 'reports' | 'history' | 'media' | 'announcements' | 'settings'>('metrics');
   const { media, announcements, settings: liveSettings } = useQueue();
   const [editing, setEditing] = useState<{ id?: number; title: string; subtitle: string; body: string; active: boolean } | null>(null);
   const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
@@ -168,7 +173,13 @@ export const AdminPage: React.FC = () => {
   };
 
   const handleDeleteMedia = async (id: number, name: string) => {
-    if (!window.confirm(`Remove "${name}" from the display?`)) return;
+    const ok = await confirm({
+      title: 'Remove this video?',
+      message: `"${name}" will be removed from the TV display and its file deleted.`,
+      confirmLabel: 'Remove',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await api.deleteMedia(id);
     } catch (err: any) {
@@ -227,7 +238,13 @@ export const AdminPage: React.FC = () => {
   };
 
   const handleDeleteAnnouncement = async (id: number, title: string) => {
-    if (!window.confirm(`Delete the announcement "${title}"?`)) return;
+    const ok = await confirm({
+      title: 'Delete this announcement?',
+      message: `"${title}" will be removed from the TV display.`,
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await api.deleteAnnouncement(id);
     } catch (err: any) {
@@ -272,6 +289,7 @@ export const AdminPage: React.FC = () => {
 
   const tabs = [
     { id: 'metrics', label: 'Overview', icon: BarChart3 },
+    { id: 'reports', label: 'Reports', icon: TrendingUp },
     { id: 'history', label: 'Ticket log', icon: FileSpreadsheet },
     { id: 'media', label: 'Display playlist', icon: Film },
     { id: 'announcements', label: 'Announcements', icon: Megaphone },
@@ -401,6 +419,9 @@ export const AdminPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* REPORTS: date range, peak hours, heatmap */}
+      {activeTab === 'reports' && <ReportsPanel />}
 
       {/* TAB 2: TICKET LOG & CSV EXPORT */}
       {activeTab === 'history' && (
@@ -858,6 +879,7 @@ export const AdminPage: React.FC = () => {
 
       {/* TAB 4: SETTINGS */}
       {activeTab === 'settings' && (
+        <>
         <form onSubmit={handleSaveSettings} className="card">
           <div className="card-header">
             <div>
@@ -1095,6 +1117,8 @@ export const AdminPage: React.FC = () => {
             </button>
           </div>
         </form>
+        <AdminAccountCard />
+        </>
       )}
     </div>
   );

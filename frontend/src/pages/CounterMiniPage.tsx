@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { ArrowRightLeft, CheckCircle, ChevronRight, MoreHorizontal, Pause, Play as PlayIcon, SkipForward, UserX, Volume2 } from 'lucide-react';
+import { ArrowRightLeft, CheckCircle, HandHelping, ChevronRight, MoreHorizontal, Pause, Play as PlayIcon, SkipForward, UserX, Volume2 } from 'lucide-react';
 import { useQueue } from '../context/QueueContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { useCounterControl } from '../hooks/useCounterControl';
 import { QUEUE_META } from '../queueStyles';
 import { QueueType } from '../types';
@@ -14,14 +15,15 @@ import { QueueType } from '../types';
  * The waiting list and on-hold list live on the full page.
  */
 export const CounterMiniPage: React.FC = () => {
+  const confirm = useConfirm();
   const { id } = useParams<{ id: string }>();
   const counterId = id ? parseInt(id, 10) || 1 : 1;
   const { isConnected } = useQueue();
   const c = useCounterControl(counterId);
   const serving = c.currentTicket?.queue_number ?? null;
 
-  // 'main' = the buttons, 'transfer' = pick customers and a line. The ⋯ menu floats over the buttons.
-  const [view, setView] = useState<'main' | 'transfer'>('main');
+  // 'main' = the buttons, 'transfer' = pick customers and a line, 'help' = take from another line. The ⋯ menu floats over the buttons.
+  const [view, setView] = useState<'main' | 'transfer' | 'help'>('main');
   const [menuOpen, setMenuOpen] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
@@ -42,10 +44,24 @@ export const CounterMiniPage: React.FC = () => {
     await c.transferMany([...selected], target);
     setView('main');
   };
-  const noShow = () => {
+  const openHelp = () => {
+    setMenuOpen(false);
+    setView('help');
+  };
+  const takeFrom = async (q: QueueType) => {
+    await c.takeFrom(q);
+    setView('main');
+  };
+  const noShow = async () => {
     setMenuOpen(false);
     if (!serving) return;
-    if (!window.confirm(`Mark ${serving} as a no-show? They will not be called again.`)) return;
+    const ok = await confirm({
+      title: `Mark ${serving} as a no-show?`,
+      message: 'They will not be called again.',
+      confirmLabel: 'Mark no-show',
+      tone: 'danger',
+    });
+    if (!ok) return;
     c.noShowCurrent();
   };
 
@@ -75,7 +91,36 @@ export const CounterMiniPage: React.FC = () => {
 
   return (
     <div className="h-screen bg-slate-50 flex flex-col gap-1 p-2 select-none overflow-hidden relative">
-      {view === 'transfer' ? (
+      {view === 'help' ? (
+        <div className="flex-1 min-h-0 flex flex-col gap-1.5">
+          <div className="flex items-center justify-between gap-2 text-sm">
+            <span className="font-semibold text-slate-900">
+              Take the next customer from <span className="font-normal text-slate-500">another line</span>
+            </span>
+            <button onClick={() => setView('main')} className="text-xs font-medium px-2 py-0.5 rounded bg-slate-200 text-slate-800 hover:bg-slate-300">
+              Cancel
+            </button>
+          </div>
+          <div className="flex-1 min-h-0 flex gap-2">
+            {(['REGULAR', 'PRIORITY', 'COMPLAINT'] as QueueType[])
+              .filter((q) => q !== c.counter.queue_type)
+              .map((q) => {
+                const n = c.waitingCounts[q] || 0;
+                return (
+                  <button
+                    key={q}
+                    onClick={() => takeFrom(q)}
+                    disabled={c.isBusy || n === 0}
+                    className={`btn btn-secondary ${tile} flex-1 ${QUEUE_META[q].chip}`}
+                  >
+                    <span className="text-sm font-semibold">{QUEUE_META[q].label}</span>
+                    <span className="text-[11px] font-medium tabular-nums">{n === 0 ? 'nobody waiting' : `${n} waiting`}</span>
+                  </button>
+                );
+              })}
+          </div>
+        </div>
+      ) : view === 'transfer' ? (
         <div className="flex-1 min-h-0 flex flex-col gap-1.5">
           <div className="flex items-center justify-between gap-2 text-sm">
             <span className="font-semibold text-slate-900">
@@ -185,7 +230,7 @@ export const CounterMiniPage: React.FC = () => {
           onClick={() => setMenuOpen((o) => !o)}
           aria-haspopup="menu"
           aria-expanded={menuOpen}
-          title="More: transfer customers, no-show"
+          title="More: transfer customers, take from another line, no-show"
           className={`btn btn-secondary ${tile} flex-[0.7]`}
         >
           <MoreHorizontal className={`w-5 h-5 text-slate-500 ${icon}`} />
@@ -206,6 +251,16 @@ export const CounterMiniPage: React.FC = () => {
             >
               <ArrowRightLeft className="w-4 h-4 text-slate-500" />
               Transfer customers…
+            </button>
+            <button
+              role="menuitem"
+              onClick={openHelp}
+              disabled={c.isPaused || !!serving}
+              title={serving ? 'Complete or skip the customer at your counter first' : 'Take the next customer from another line'}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left text-slate-800 hover:bg-slate-100 disabled:opacity-40"
+            >
+              <HandHelping className="w-4 h-4 text-slate-500" />
+              Take from another line…
             </button>
             <button
               role="menuitem"

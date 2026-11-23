@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { QueueType } from '../types';
 import { api } from '../services/api';
 import { useQueue } from '../context/QueueContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { TransferModal } from '../components/TransferModal';
 import { QUEUE_META, formatTime } from '../queueStyles';
 import {
@@ -20,6 +21,7 @@ import {
 import { openMiniWindow } from '../services/miniWindow';
 
 export const CounterPage: React.FC = () => {
+  const confirm = useConfirm();
   const { id } = useParams<{ id: string }>();
   const counterId = id ? parseInt(id) : 1;
 
@@ -166,7 +168,13 @@ export const CounterPage: React.FC = () => {
 
   const handleMarkNoShow = async (ticketId: number) => {
     const number = skippedTickets.find((t) => t.id === ticketId)?.queue_number || 'this customer';
-    if (!confirm(`Mark ${number} as a no-show? They will be taken off the list and will not be called again.`)) return;
+    const ok = await confirm({
+      title: `Mark ${number} as a no-show?`,
+      message: 'They will be taken off the list and will not be called again.',
+      confirmLabel: 'Mark no-show',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setIsProcessing(true);
     try {
       await api.markNoShow(counterId, ticketId);

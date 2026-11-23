@@ -4,6 +4,7 @@ from typing import Optional
 from database import get_db, verify_password, hash_password
 from auth import create_access_token, get_current_user, require_role
 from models import LoginRequest, TokenResponse, UserResponse
+import re
 import aiosqlite
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
@@ -18,6 +19,14 @@ class CreateUserRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
+
+class UpdateAccountRequest(BaseModel):
+    current_password: str
+    new_username: Optional[str] = None
+    new_password: Optional[str] = None
+
+USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9._-]{3,32}$")
+MIN_PASSWORD_LENGTH = 6
 
 @router.post("/login", response_model=TokenResponse)
 async def login(req: LoginRequest, db: aiosqlite.Connection = Depends(get_db)):
@@ -90,3 +99,59 @@ async def change_password(
     await db.execute("UPDATE users SET password_hash = ? WHERE id = ?", (new_hash, current_user["id"]))
     await db.commit()
     return {"message": "Password updated successfully"}
+
+
+@router.put("/account", response_model=TokenResponse)
+async def update_account(
+    req: UpdateAccountRequest,
+    db: aiosqlite.Connection = Depends(get_db),
+    admin: dict = Depends(require_role("ADMIN"))
+):
+    """
+    Lets the signed-in admin change their own username and/or password. The current
+    password is always required. Sign-in tokens carry the username, so a fresh token
+    is returned and the admin stays signed in on this screen.
+    """
+    new_username = (req.new_username or "").strip()
+    new_password = req.new_password or ""
+    if not new_username and not new_password:
+        raise HTTPException(status_code=400, detail="Enter a new username or a new password.")
+
+    cursor = await db.execute("SELECT password_hash FROM users WHERE id = ?", (admin["id"],))
+    row = await cursor.fetchone()
+    if not row or not verify_password(row["password_hash"], req.current_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+
+    if new_username and new_username == admin["username"]:
+        new_username = ""  # nothing to change
+    if new_username:
+        if not USERNAME_PATTERN.match(new_username):
+            raise HTTPException(
+                status_code=400,
+                detail="Username must be 3-32 characters: letters, numbers, dot, dash or underscore."
+            )
+        cursor = await db.execute(
+            "SELECT 1 FROM users WHERE lower(username) = lower(?) AND id != ?", (new_username, admin["id"])
+        )
+        if await cursor.fetchone():
+            raise HTTPException(status_code=400, detail="That username is already taken.")
+    if new_password:
+        if len(new_password) < MIN_PASSWORD_LENGTH:
+            raise HTTPException(status_code=400, detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters.")
+        if verify_password(row["password_hash"], new_password):
+            raise HTTPException(status_code=400, detail="The new password is the same as the current one.")
+    if not new_username and not new_password:
+        raise HTTPException(status_code=400, detail="Nothing to change.")
+
+    username = new_username or admin["username"]
+    if new_username:
+        await db.execute("UPDATE users SET username = ? WHERE id = ?", (new_username, admin["id"]))
+    if new_password:
+        await db.execute("UPDATE users SET password_hash = ? WHERE id = ?", (hash_password(new_password), admin["id"]))
+    await db.commit()
+
+    return {
+        "access_token": create_access_token(data={"sub": username, "role": admin["role"]}),
+        "token_type": "bearer",
+        "user": {**admin, "username": username},
+    }

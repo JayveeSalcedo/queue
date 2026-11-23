@@ -4,12 +4,24 @@ import { useAuth } from '../context/AuthContext';
 import { useQueue } from '../context/QueueContext';
 import { Volume2, VolumeX, LogOut, LogIn, Download } from 'lucide-react';
 import { InstallDialog } from './InstallDialog';
+import { useConfirm } from '../context/ConfirmContext';
 
 export const Navbar: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const { isConnected, isAudioEnabled, enableAudio, settings } = useQueue();
   const location = useLocation();
+  const confirm = useConfirm();
   const [isInstallOpen, setIsInstallOpen] = useState(false);
+
+  const handleLogout = async () => {
+    const ok = await confirm({
+      title: 'Sign out?',
+      message: `${user?.full_name || 'You'} will be signed out of this station.`,
+      confirmLabel: 'Sign out',
+      icon: 'logout',
+    });
+    if (ok) logout();
+  };
 
   // Hide completely on the TV display and in the small counter pop-up window
   if (location.pathname === '/display' || location.pathname.endsWith('/mini')) {
@@ -123,7 +135,7 @@ export const Navbar: React.FC = () => {
                   <div className="text-sm font-medium text-slate-900 leading-tight">{user.full_name}</div>
                   <div className="text-xs text-slate-500 capitalize">{user.role.toLowerCase()}</div>
                 </div>
-                <button onClick={logout} title="Sign out" className="btn btn-ghost p-2">
+                <button onClick={handleLogout} title="Sign out" className="btn btn-ghost p-2">
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>

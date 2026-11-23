@@ -15,6 +15,9 @@ router = APIRouter(prefix="/api/counters", tags=["Counters"])
 class TicketActionBody(BaseModel):
     ticket_id: int
 
+class TakeFromBody(BaseModel):
+    queue_type: str  # the line to take the next waiting customer from
+
 class CounterStatusBody(BaseModel):
     status: str  # 'ACTIVE' or 'PAUSED'
 
@@ -276,6 +279,76 @@ async def call_specific_ticket(
 
     await ws_manager.broadcast_state("CALLED", last_called_ticket=called_payload)
     return {"message": "Called ticket", "ticket": called_payload}
+
+@router.post("/{counter_id}/take-from")
+async def take_from_queue(
+    counter_id: int,
+    req: TakeFromBody,
+    db: aiosqlite.Connection = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    """
+    Help another line: a free counter takes the next waiting customer from any queue,
+    for example when the Regular counter is swamped and the Priority one is idle.
+    No admin setting needed. Only works while this counter has no customer, so it can
+    never close someone who is still being served.
+    """
+    queue_type = req.queue_type.upper()
+    if queue_type not in QUEUE_LABELS:
+        raise HTTPException(status_code=400, detail="Unknown queue")
+
+    await begin_write(db)
+    await close_stale_tickets(db)
+
+    cursor = await db.execute("SELECT id, name, queue_type, status, current_ticket_id FROM counters WHERE id = ?", (counter_id,))
+    counter = await cursor.fetchone()
+    if not counter:
+        raise HTTPException(status_code=404, detail="Counter not found")
+    if counter["status"] == "PAUSED":
+        raise HTTPException(status_code=409, detail=f"{counter['name']} is paused. Resume the counter first.")
+    if counter["current_ticket_id"]:
+        raise HTTPException(
+            status_code=409,
+            detail="Finish or skip the customer at your counter before taking one from another line."
+        )
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    cursor = await db.execute(
+        """
+        SELECT id, queue_number, queue_type FROM tickets
+        WHERE status = 'WAITING' AND session_date = ? AND queue_type = ?
+        ORDER BY number_seq ASC LIMIT 1
+        """,
+        (today, queue_type)
+    )
+    ticket = await cursor.fetchone()
+    if not ticket:
+        raise HTTPException(status_code=404, detail=f"Nobody is waiting in the {QUEUE_LABELS[queue_type]} line.")
+
+    await db.execute(
+        """
+        UPDATE tickets
+        SET status = 'CALLED', called_at = ?, serving_at = ?, counter_id = ?, called_by_user = ?
+        WHERE id = ?
+        """,
+        (now_str, now_str, counter_id, user["username"], ticket["id"])
+    )
+    await note_call(db, ticket["queue_type"], today)
+    await db.execute("UPDATE counters SET current_ticket_id = ? WHERE id = ?", (ticket["id"], counter_id))
+    await db.commit()
+
+    called_payload = {
+        "id": ticket["id"],
+        "queue_number": ticket["queue_number"],
+        "queue_type": ticket["queue_type"],
+        "counter_id": counter_id,
+        "counter_name": counter["name"],
+        "called_at": now_str
+    }
+    await ws_manager.broadcast_state("CALLED", last_called_ticket=called_payload)
+    return {"message": f"Took {ticket['queue_number']} from the {QUEUE_LABELS[queue_type]} line", "ticket": called_payload}
 
 @router.post("/{counter_id}/recall")
 async def recall_ticket(

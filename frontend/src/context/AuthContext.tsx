@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<User>;
+  updateAccount: (data: { current_password: string; new_username?: string; new_password?: string }) => Promise<User>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -41,6 +42,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return res.user;
   };
 
+  const updateAccount = async (data: { current_password: string; new_username?: string; new_password?: string }) => {
+    const res = await api.updateAccount(data);
+    // The sign-in token carries the username, so keep the fresh one
+    setAuthToken(res.access_token);
+    setUser(res.user);
+    return res.user;
+  };
+
   const logout = () => {
     removeAuthToken();
     setUser(null);
@@ -52,6 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         isLoading,
         login,
+        updateAccount,
         logout,
         isAuthenticated: !!user,
       }}

@@ -125,3 +125,42 @@ export interface AdminMetrics {
   avg_wait_minutes: number;
   avg_service_minutes: number;
 }
+
+export interface ReportDay {
+  date: string;
+  total: number;
+  completed: number;
+  avg_wait_minutes: number | null;
+  avg_service_minutes: number | null;
+}
+
+export interface AdminReport {
+  start: string;
+  end: string;
+  summary: {
+    total: number;
+    completed: number;
+    cancelled: number;
+    skipped: number;
+    days_open: number;
+    avg_wait_minutes: number | null;
+    max_wait_minutes: number | null;
+    avg_service_minutes: number | null;
+  };
+  daily: ReportDay[];
+  /** tickets by arrival time: heatmap[weekday 0=Sunday][hour 0-23] */
+  heatmap: number[][];
+  by_queue: Array<{
+    queue_type: string;
+    total: number;
+    completed: number;
+    avg_wait_minutes: number | null;
+    avg_service_minutes: number | null;
+  }>;
+  by_counter: Array<{
+    counter_id: number;
+    counter_name: string;
+    served: number;
+    avg_service_minutes: number | null;
+  }>;
+}

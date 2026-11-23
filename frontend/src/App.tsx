@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { QueueProvider } from './context/QueueContext';
+import { ConfirmProvider } from './context/ConfirmContext';
 import { Navbar } from './components/Navbar';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { HomePage } from './pages/HomePage';
@@ -30,6 +31,7 @@ export const App: React.FC = () => {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ConfirmProvider>
         <QueueProvider>
           <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-emerald-100 selection:text-emerald-950">
             <Navbar />
@@ -91,6 +93,7 @@ export const App: React.FC = () => {
             </main>
           </div>
         </QueueProvider>
+        </ConfirmProvider>
       </AuthProvider>
     </BrowserRouter>
   );

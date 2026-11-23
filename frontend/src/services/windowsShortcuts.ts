@@ -20,6 +20,11 @@ export interface ShortcutSpec {
    * provide it (it is a regular small browser window otherwise).
    */
   miniApp?: { counter: number; width: number; height: number };
+  /**
+   * Full-screen TV mode: no window frame, and the browser may play the chime, voice and
+   * videos without anyone clicking the page first. For the public display PC.
+   */
+  kiosk?: boolean;
   /** Offer to start this one when Windows starts */
   startWithWindows?: boolean;
 }
@@ -32,7 +37,14 @@ export function buildWindowsInstaller(origin: string, shortcuts: ShortcutSpec[])
 
   const creators = shortcuts
     .map((s) => {
-      const args = [`--app=${base}${safe(s.path)}`];
+      const args = s.kiosk
+        ? [
+            `--kiosk ${base}${safe(s.path)}`,
+            '--edge-kiosk-type=fullscreen',
+            '--autoplay-policy=no-user-gesture-required',
+            '--no-first-run',
+          ]
+        : [`--app=${base}${safe(s.path)}`];
       if (s.size) args.push(`--window-size=${Math.round(s.size.width)},${Math.round(s.size.height)}`);
       const miniArgs = s.miniApp
         ? `--url=${base}${safe(s.path)} --counter=${Math.round(s.miniApp.counter)} ` +
@@ -111,6 +123,25 @@ export function buildWindowsInstaller(origin: string, shortcuts: ShortcutSpec[])
       `powershell -NoProfile -Command "$ws = New-Object -ComObject WScript.Shell; ${c.startup}"`,
       'echo  It will open when this PC starts.',
       ':skipstartup',
+      'echo.'
+    );
+  }
+
+  // A TV that falls asleep shows nothing: offer to keep the screen on
+  if (shortcuts.some((s) => s.kiosk)) {
+    lines.push(
+      'choice /C YN /N /M " Keep this PC and its screen from going to sleep? [Y/N] "',
+      'if errorlevel 2 goto skippower',
+      'powercfg /change monitor-timeout-ac 0 >nul 2>&1',
+      'powercfg /change standby-timeout-ac 0 >nul 2>&1',
+      'powercfg /change monitor-timeout-dc 0 >nul 2>&1',
+      'powercfg /change standby-timeout-dc 0 >nul 2>&1',
+      'echo  The screen will stay on.',
+      ':skippower',
+      'echo.',
+      'echo  Tip: to also skip the Windows password screen at power-on, press Win+R, type netplwiz,',
+      'echo  untick "Users must enter a user name and password", and enter the password once.',
+      'echo  To close the display: press Alt+F4.',
       'echo.'
     );
   }

@@ -77,6 +77,14 @@ def main():
     metrics = get("/api/admin/metrics", token=token)
     print(f"Today total tickets: {metrics['status_counts']['TOTAL']}, Completed: {metrics['status_counts']['COMPLETED']}")
 
+    print("\n--- 9b. Testing Admin Reports ---")
+    today = metrics["session_date"]
+    rep = get(f"/api/admin/reports?start={today}&end={today}", token=token)
+    assert rep["summary"]["total"] == metrics["status_counts"]["TOTAL"], "report total should match today's metrics"
+    assert len(rep["heatmap"]) == 7 and all(len(row) == 24 for row in rep["heatmap"])
+    assert sum(sum(row) for row in rep["heatmap"]) == rep["summary"]["total"]
+    print(f"Report for {today}: {rep['summary']['total']} tickets, {len(rep['by_counter'])} counters")
+
     print("\n--- 10. Testing Database Backup ---")
     bk = post("/api/admin/backup-db", {}, token=token)
     print(f"Backup created: {bk['filename']} ({bk['size_kb']} KB)")

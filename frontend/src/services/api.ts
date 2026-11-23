@@ -1,4 +1,4 @@
-import { Announcement, MediaItem, QueueType, Ticket, Counter, QueueStateSnapshot, User, AdminMetrics } from '../types';
+import { Announcement, MediaItem, QueueType, Ticket, Counter, QueueStateSnapshot, User, AdminMetrics, AdminReport } from '../types';
 
 const API_BASE = '/api';
 
@@ -74,6 +74,14 @@ export const api = {
     });
   },
 
+  async updateAccount(data: {
+    current_password: string;
+    new_username?: string;
+    new_password?: string;
+  }): Promise<{ access_token: string; user: User }> {
+    return request('/auth/account', { method: 'PUT', body: JSON.stringify(data) });
+  },
+
   async getMe(): Promise<User> {
     return request('/auth/me');
   },
@@ -121,6 +129,13 @@ export const api = {
   async callNext(counterId: number): Promise<{ message: string; ticket: any }> {
     return request(`/counters/${counterId}/call-next`, {
       method: 'POST',
+    });
+  },
+
+  async takeFrom(counterId: number, queueType: string): Promise<{ message: string; ticket: any }> {
+    return request(`/counters/${counterId}/take-from`, {
+      method: 'POST',
+      body: JSON.stringify({ queue_type: queueType }),
     });
   },
 
@@ -195,6 +210,10 @@ export const api = {
   // Admin
   async getMetrics(): Promise<AdminMetrics> {
     return request('/admin/metrics');
+  },
+
+  async getReport(start: string, end: string): Promise<AdminReport> {
+    return request(`/admin/reports?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
   },
 
   async getSettings(): Promise<Record<string, string>> {

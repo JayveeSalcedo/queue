@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { QueueType, Ticket } from '../types';
 import { api } from '../services/api';
 import { useQueue } from '../context/QueueContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { thermalPrinterService } from '../services/printer';
 import { TicketPrintModal } from '../components/TicketPrintModal';
 import { ResetConfirmModal } from '../components/ResetConfirmModal';
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 
 export const GuardPage: React.FC = () => {
+  const confirm = useConfirm();
   const { waitingCounts, waitingTickets, refreshState, settings } = useQueue();
   const [createdTicket, setCreatedTicket] = useState<Ticket | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -52,6 +54,14 @@ export const GuardPage: React.FC = () => {
   };
 
   const handleVoidTicket = async (ticketId: number) => {
+    const number = issuedThisSession.find((t) => t.id === ticketId)?.queue_number || 'this ticket';
+    const ok = await confirm({
+      title: `Void ${number}?`,
+      message: 'The customer will be removed from the queue.',
+      confirmLabel: 'Void ticket',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setVoidingId(ticketId);
     try {
       const res = await api.voidTicket(ticketId);

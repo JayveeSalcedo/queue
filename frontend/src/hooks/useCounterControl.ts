@@ -100,6 +100,7 @@ export function useCounterControl(counterId: number) {
     inCoverGroup,
     covering,
     waiting,
+    waitingCounts,
     transferable,
     isBusy,
     notice,
@@ -113,6 +114,8 @@ export function useCounterControl(counterId: number) {
     skip: () => run(() => api.skip(counterId), 'Moved to the on-hold list.'),
     transferMany: (ticketIds: number[], target: QueueType) =>
       run(async () => (await api.transferMany(counterId, ticketIds, target)).message),
+    // Help another line: take its next waiting customer (only while this counter is free)
+    takeFrom: (queueType: QueueType) => run(async () => (await api.takeFrom(counterId, queueType)).message),
     noShowCurrent: () =>
       run(async () => {
         if (!currentTicket) throw new Error('There is no customer at the counter.');
